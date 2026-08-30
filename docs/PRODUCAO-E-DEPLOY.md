@@ -572,3 +572,25 @@ feito** — isso é uma ação sua (`git remote add origin <URL> && git push -u
 origin main`), quando você decidir onde hospedar o código (GitHub/GitLab/
 etc.). `.github/workflows/ci.yml` só passa a rodar de verdade depois desse
 push para o GitHub.
+
+## 17. Como colocar o aplicativo no ar (checklist rápido)
+
+Resumo de referência rápida — cada item aponta para a seção com o passo a
+passo completo e os comandos reais.
+
+1. **GitHub**: `git remote add origin <URL-DO-SEU-REPOSITORIO> && git push -u origin main` (seção 16).
+2. **Hospedagem**: crie a conta (Railway/Render/Fly.io — seção 6.4). 🔴 bloqueio externo até você ter uma conta.
+3. **Banco**: adicione um serviço PostgreSQL gerenciado no mesmo provedor (seção 6.4).
+4. **Variáveis de ambiente**: `DATABASE_URL`, `APP_BASE_URL` no painel do provedor (seção 1).
+5. **Migrations**: `npx prisma migrate deploy` (seção 5/15-F).
+6. **Deploy**: `npm ci && npm run build && npm run start` (ou o botão de deploy do provedor) (seção 5/15-F).
+7. **Health check**: abra `<APP_BASE_URL>/api/health` → espere `{"status":"ok","database":"ok"}` (seção 10).
+8. **Teste web**: cadastro → login → dashboard pelo navegador, na URL pública.
+9. **Capacitor**: `export CAPACITOR_SERVER_URL="https://SUA-URL"` (nunca localhost/IP privado) (seção 6.3).
+10. **APK**: `npm run cap:sync && npm run android:build` (seção 6.5). ⚠️ exige JDK 17+/Android SDK na sua máquina.
+11. **Teste no celular**: `adb install -r android/app/build/outputs/apk/debug/app-debug.apk` (`docs/ANDROID-TESTE.md`). ⚠️ exige celular conectado.
+12. **Envio para outra pessoa**: mande o `.apk` por WhatsApp/Drive/Telegram (seção 14/`docs/ANDROID-TESTE.md` seção 5) — ela só precisa de internet, nunca da sua Wi-Fi.
+13. **Correções**: altere o código → `npm run test && npm run build` → repita a partir do passo 6 (ou 9, se só mudou conteúdo web).
+14. **Release**: `cd android && ./gradlew assembleRelease` (exige keystore — `docs/PLAY-STORE.md` seção 3). 🔴 bloqueio até você gerar sua chave.
+15. **AAB**: `cd android && ./gradlew bundleRelease` → `android/app/build/outputs/bundle/release/app-release.aab`.
+16. **Play Store**: upload do `.aab` no Google Play Console (`docs/PLAY-STORE.md` seções 4-6). 🔴 exige conta de desenvolvedor + informações suas (política de privacidade, screenshots).
