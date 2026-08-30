@@ -98,6 +98,22 @@ keytool -genkeypair -v -keystore estuda-release.keystore \
 2. Só depois de validado, promova para produção (fechada → aberta → total,
    conforme sua preferência de rollout gradual).
 
+## 6.1 Processo de atualização (depois de já publicado)
+
+```
+alterar código → testar → build web → deploy do backend
+```
+
+- Se a mudança foi só web/conteúdo (a maioria): **nenhuma nova versão do
+  app é necessária** — o wrapper Android carrega `server.url` ao vivo, o
+  usuário já vê a mudança na próxima vez que abrir o app.
+- Se a mudança envolveu o projeto nativo (`android/`, ícone, permissão,
+  `capacitor.config.ts`): incremente `versionCode` (sempre) e `versionName`
+  (semver — `1.0.1` correção, `1.1.0` funcionalidade nova, `2.0.0` mudança
+  grande) em `android/app/build.gradle`, gere um novo `.aab`
+  (`cd android && ./gradlew bundleRelease`) e suba como nova versão na Play
+  Console — a Play Store nunca aceita reenviar o mesmo `versionCode`.
+
 ## 7. O que NÃO foi feito nesta sessão (por decisão, não esquecimento)
 
 - Nenhuma chave de assinatura real foi gerada.

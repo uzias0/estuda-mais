@@ -336,15 +336,34 @@ deste CI de validação).
   inventar infraestrutura inexistente).
 - **Rollback de código**: reverter para o commit/deploy anterior no
   provedor de hospedagem (a maioria mantém histórico de deploys com
-  "restaurar" de um clique).
+  "restaurar" de um clique) — agora possível de verdade, já que o projeto
+  tem um repositório Git real (seção 16): `git revert`/`git checkout` para
+  qualquer commit anterior.
 - **Rollback de migration**: Prisma não gera "down migrations" automáticas
   — se uma migration precisar ser desfeita, escreva uma migration NOVA que
-  reverte a alteração (nunca edite uma migration já aplicada). Todas as 13
+  reverte a alteração (nunca edite uma migration já aplicada). Todas as 12
   migrations deste projeto são aditivas (nenhuma removeu coluna/tabela) —
   sem histórico de rollback destrutivo necessário até agora.
 - **Rollback de PWA**: o service worker (`CACHE_NAME`) — reverter o código
   publicado já basta; o próximo `activate` limpa o cache antigo
   automaticamente.
+- **Rollback do app Android**: a Play Console permite reverter para uma
+  versão anterior já publicada (rollout); localmente, basta reinstalar um
+  `.apk`/`.aab` de `versionCode` anterior que você tenha guardado.
+- **Importância da chave de assinatura (keystore)**: é o único jeito de
+  publicar uma ATUALIZAÇÃO de um app já na Play Store — perdê-la significa
+  não conseguir mais atualizar esse app para sempre (só publicar um app
+  novo, com `applicationId` diferente, perdendo todos os usuários/reviews).
+  Guarde-a em pelo menos 2 lugares seguros e independentes (ex.: cofre de
+  senhas + backup físico offline), nunca só no seu computador de
+  desenvolvimento.
+- **Importância das variáveis de ambiente**: `DATABASE_URL`/`APP_BASE_URL`/
+  `CAPACITOR_SERVER_URL` de produção não estão em nenhum arquivo versionado
+  — existem só no painel do provedor de hospedagem. Se você trocar de
+  provedor ou perder acesso ao painel sem ter essas variáveis anotadas em
+  um cofre de senhas, precisará reconfigurar tudo do zero (o código
+  continua íntegro no Git; só a configuração de ambiente não é
+  recuperável por si só).
 
 ## 10. Observabilidade
 
@@ -437,3 +456,119 @@ o que precisa estar na internet é o backend de staging/produção (seção
     novo antes de qualquer coisa.
 12. **Gerar nova versão** — incremente `versionCode`/`versionName`
     (`android/app/build.gradle`) e repita os passos 6-9.
+
+## 15. Guia definitivo: do zero até produção (A→P)
+
+Cada letra usa comandos REAIS deste projeto (não genéricos). Repositório
+Git já inicializado nesta fase (branch `main`, commit inicial com todo o
+código — ver seção 16).
+
+**A. Preparar o computador**
+
+```bash
+node --version   # 22+
+git --version
+```
+
+Instale Android Studio se ainda não tiver (`docs/ANDROID-TESTE.md`, seção 0).
+
+**B. Configurar Git** (já feito nesta sessão — para uma máquina nova/clone):
+
+```bash
+git clone <URL-DO-SEU-REPOSITORIO-REMOTO>   # depois de você criar um remoto (GitHub/GitLab)
+cd estuda-mais
+npm install
+```
+
+**C. Criar o banco** (staging/produção — nunca reutilize o de dev):
+
+- Provisionar um Postgres gerenciado real no seu provedor escolhido
+  (seção 6.4) — copie a `DATABASE_URL` gerada.
+
+**D. Configurar o ambiente**
+
+```bash
+cp .env.example .env
+# edite .env: DATABASE_URL (do passo C), APP_BASE_URL (a URL HTTPS pública)
+```
+
+**E. Configurar staging** — ver seção 6.4 (**BLOQUEIO EXTERNO** enquanto
+não houver conta de hospedagem).
+
+**F. Deploy**
+
+```bash
+npm ci
+npx prisma migrate deploy
+npm run build
+npm run start
+```
+
+**G. Criar o administrador** (uma vez, por ambiente):
+
+```bash
+BOOTSTRAP_ADMIN_EMAIL=seu-email-real@dominio.com \
+BOOTSTRAP_ADMIN_PASSWORD=umaSenhaForteReal123! \
+npm run db:seed-admin
+```
+
+**H. Testar a web**: abra `APP_BASE_URL` no navegador → cadastro → login →
+dashboard → `GET /api/health` deve responder `{"status":"ok"}`. Rode
+`npm run db:seed-academic && npm run db:seed-academic-v2` se quiser o
+conteúdo acadêmico real também nesse ambiente (idempotente).
+
+**I. Configurar o Android** — ver `docs/ANDROID-TESTE.md`, seção 0 (JDK
+17+, Android SDK, `ANDROID_HOME`).
+
+**J. Gerar o APK**
+
+```bash
+export CAPACITOR_SERVER_URL="https://SUA-URL-DE-STAGING-OU-PRODUCAO"
+npm run cap:sync
+npm run android:build
+```
+
+**K. Testar no celular** — `docs/ANDROID-TESTE.md`, seções 2-4 (`adb
+devices`, `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`,
+roteiro completo).
+
+**L. Testar o APK remotamente (outra pessoa)** — `docs/ANDROID-TESTE.md`,
+seção 5 (envie o `.apk` por qualquer meio; ela só precisa de internet).
+
+**M. Gerar o release** (assinado — depois de criar sua keystore, ver
+`docs/PLAY-STORE.md` seção 3):
+
+```bash
+cd android && ./gradlew assembleRelease
+```
+
+**N. Gerar o AAB** (formato exigido pela Play Store):
+
+```bash
+cd android && ./gradlew bundleRelease
+# saída: android/app/build/outputs/bundle/release/app-release.aab
+```
+
+**O. Publicar na Play Store** — `docs/PLAY-STORE.md`, seções 4-6 (Google
+Play Console, upload do `.aab`, preencher os itens que dependem de você).
+
+**P. Atualizar depois de publicado**:
+
+```
+alterar código → npm run test → npm run build → deploy do backend
+→ (se a mudança for só web/conteúdo: PRONTO, nenhum novo APK necessário)
+→ (se a mudança envolver o wrapper nativo: incrementar versionCode/versionName
+   → repetir J-N → enviar atualização pela Play Console)
+```
+
+## 16. Git
+
+Repositório inicializado nesta fase: `git init`, branch `main` (identidade
+local configurada só neste repositório, não globalmente), **1 commit
+inicial** com todo o código atual (553 arquivos, conferido antes do commit
+que nenhum `.env`/keystore/`node_modules`/build gerado foi incluído — só
+`.env.example`, como esperado). **Nenhum remoto configurado, nenhum push
+feito** — isso é uma ação sua (`git remote add origin <URL> && git push -u
+origin main`), quando você decidir onde hospedar o código (GitHub/GitLab/
+etc.). `.github/workflows/ci.yml` só passa a rodar de verdade depois desse
+push para o GitHub.
