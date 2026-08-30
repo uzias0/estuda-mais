@@ -1,0 +1,73 @@
+name: CI
+
+# Preparado para quando o repositório for conectado ao GitHub (fase de
+# produção, seção 11/CI-CD). Este projeto ainda não tem `.git` — o arquivo
+# fica pronto para ativar assim que `git init` + push para um remoto forem
+# feitos manualmente (ver docs/PRODUCAO-E-DEPLOY.md, seção CI/CD).
+#
+# `typecheck → lint → format:check → test → build`, nesta ordem, cada etapa
+# bloqueando a seguinte. Nenhum deploy automático aqui — deploy de produção
+# fica num job/workflow separado, disparado manualmente ou por um provedor
+# de hospedagem conectado ao repositório (Vercel/Railway/Render costumam
+# rodar seu próprio build a partir do push, independente deste workflow).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: estuda
+          POSTGRES_PASSWORD: estuda_ci_only
+          POSTGRES_DB: estuda_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U estuda"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DATABASE_URL: postgresql://estuda:estuda_ci_only@localhost:5432/estuda_ci
+      APP_BASE_URL: http://localhost:3000
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Prisma validate
+        run: npx prisma validate
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Aplicar migrations (banco de CI, nunca produção)
+        run: npx prisma migrate deploy
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Testes
+        run: npm run test -- --run
+
+      - name: Build de produção
+        run: npm run build

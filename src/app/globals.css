@@ -1,0 +1,1072 @@
+/**
+ * Sistema visual central (Módulo 11, seções 35/36) — tokens + classes
+ * reutilizáveis, nenhuma biblioteca visual nova adicionada (seção 3: "não
+ * introduzir outra biblioteca visual sem verificar primeiro o que já
+ * existe" — nada existia antes deste módulo). CSS puro (custom
+ * properties), sem Tailwind/CSS-in-JS: a stack real do projeto não tinha
+ * nenhum deles, e adicionar um agora seria trocar de ferramenta sem
+ * necessidade (seção 3).
+ *
+ * Nenhuma cor é espalhada como valor literal pelos componentes — sempre
+ * via estas variáveis ou as classes utilitárias abaixo (seção 36).
+ */
+
+:root {
+  /* Superfícies */
+  --color-bg: #f7f8fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f0f2f7;
+  --color-border: #e2e5ec;
+
+  /* Texto */
+  --color-text: #1a1d29;
+  --color-text-muted: #5b6072;
+  --color-text-subtle: #8b90a0;
+
+  /* Marca / acadêmico (azul-roxo, seção 36) */
+  --color-brand: #5b5bf0;
+  --color-brand-strong: #4444d1;
+  --color-brand-bg: #eeeeff;
+
+  /* Semânticas */
+  --color-success: #1c8a5a;
+  --color-success-bg: #e5f7ee;
+  --color-danger: #d13b3b;
+  --color-danger-bg: #fdeaea;
+  --color-warning: #b8720b;
+  --color-warning-bg: #fdf1de;
+
+  /* Gamificação */
+  --color-xp: #7c4dff;
+  --color-streak: #ff7a3d;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --shadow-card: 0 1px 2px rgba(20, 22, 35, 0.04), 0 8px 24px rgba(20, 22, 35, 0.06);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --sidebar-width: 264px;
+  --header-height: 64px;
+  --bottom-nav-height: 64px;
+
+  /* ---- Fase de redesign visual — tokens de motion/profundidade/marca ----
+   * Centralizados aqui de propósito (seção 5 do prompt: "não espalhar
+   * valores visuais aleatórios por componentes") — todo componente novo
+   * desta fase usa só estas variáveis, nunca um valor literal solto. */
+  --radius-pill: 999px;
+  --motion-fast: 120ms;
+  --motion-base: 220ms;
+  --motion-celebrate: 550ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --gradient-brand: linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-strong) 100%);
+  --shadow-float: 0 6px 20px rgba(91, 91, 240, 0.22);
+  --shadow-pop: 0 16px 40px rgba(20, 22, 35, 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #12131a;
+    --color-surface: #1a1c26;
+    --color-surface-muted: #20222e;
+    --color-border: #2c2f3d;
+    --color-text: #eef0f6;
+    --color-text-muted: #a6abbd;
+    --color-text-subtle: #767c90;
+    --color-brand: #8686ff;
+    --color-brand-strong: #a3a3ff;
+    --color-brand-bg: #23234a;
+    --color-success: #4ad395;
+    --color-success-bg: #12301f;
+    --color-danger: #ff6b6b;
+    --color-danger-bg: #3a1414;
+    --color-warning: #ffb85c;
+    --color-warning-bg: #3a2a0c;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---- Layout utilitário ---------------------------------------------- */
+
+.page-container {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-5);
+}
+
+@media (max-width: 640px) {
+  .page-container {
+    padding: var(--space-4);
+  }
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.row-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* ---- Cartão ------------------------------------------------------------ */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+}
+
+.card--tight {
+  padding: var(--space-4);
+}
+
+/* Cartão de destaque (fase de redesign, seção 8: "continuar estudando" é
+ * a ação mais importante do app) — mesmo `.card`, só com mais presença:
+ * fundo levemente tingido de marca + sombra mais funda, nunca outra cor
+ * nova solta. */
+.card-hero {
+  background: linear-gradient(160deg, var(--color-brand-bg) 0%, var(--color-surface) 65%);
+  border-color: var(--color-brand-bg);
+  box-shadow: var(--shadow-pop);
+}
+
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ---- Botões ------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  min-height: 44px;
+  transition:
+    transform 0.05s ease,
+    opacity 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--gradient-brand);
+  color: #ffffff;
+  box-shadow: var(--shadow-float);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-base) ease,
+    box-shadow var(--motion-base) ease;
+}
+/* `hover:hover` evita o "hover fantasma" que toque em tela sensível ao toque
+ * dispara em navegadores mobile — só eleva de verdade quando há mouse. */
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 8px 26px rgba(91, 91, 240, 0.3);
+    transform: translateY(-1px);
+  }
+}
+
+.btn-secondary {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-border);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ---- Badges / status ---------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+
+.badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+.badge-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+.badge-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+.badge-brand {
+  background: var(--color-brand-bg);
+  color: var(--color-brand-strong);
+}
+.badge-muted {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+/* ---- Barra de progresso -------------------------------------------------- */
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  background: var(--color-surface-muted);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-brand);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.progress-fill--success {
+  background: var(--color-success);
+}
+
+/* ---- Estados vazio / erro ------------------------------------------------ */
+
+.empty-state,
+.error-state {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.error-state {
+  color: var(--color-danger);
+}
+
+/* ---- Skeleton de loading ------------------------------------------------- */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-muted) 25%,
+    var(--color-border) 37%,
+    var(--color-surface-muted) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* ---- Shell do dashboard: header + sidebar (seção 5) ---------------------- */
+
+.app-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.app-header-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--color-brand-strong);
+  text-decoration: none;
+}
+
+.app-header-search {
+  flex: 1;
+  max-width: 360px;
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .app-header-search {
+    display: block;
+  }
+}
+
+.app-header-search input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  min-height: 40px;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.app-header-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+}
+
+.app-shell {
+  display: flex;
+  min-height: calc(100vh - var(--header-height));
+}
+
+.app-sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: var(--space-5) var(--space-3);
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .app-sidebar {
+    display: block;
+  }
+}
+
+.sidebar-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+  min-height: 44px;
+}
+
+.sidebar-nav-link:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.sidebar-nav-link[data-active="true"] {
+  background: var(--color-brand-bg);
+  color: var(--color-brand-strong);
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: var(--bottom-nav-height);
+}
+
+@media (min-width: 1024px) {
+  .app-main {
+    padding-bottom: 0;
+  }
+}
+
+/* ---- Navegação inferior (mobile, seção 5/42) ----------------------------- */
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--bottom-nav-height);
+  display: flex;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  z-index: 20;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+@media (min-width: 1024px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+.bottom-nav-link {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--color-text-subtle);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 6px 0;
+}
+
+.bottom-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  color: inherit;
+  transition:
+    background var(--motion-base) var(--ease-standard),
+    transform var(--motion-base) var(--ease-bounce);
+}
+
+.bottom-nav-link[data-active="true"] {
+  color: var(--color-brand-strong);
+}
+
+.bottom-nav-link[data-active="true"] .bottom-nav-icon {
+  background: var(--color-brand-bg);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-nav-icon {
+    transition: none;
+  }
+  .bottom-nav-link[data-active="true"] .bottom-nav-icon {
+    transform: none;
+  }
+}
+
+/* ---- Formulário de questão (seção 10/42) --------------------------------- */
+
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  min-height: 48px;
+  background: var(--color-surface);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.option-row:active {
+  transform: scale(0.98);
+}
+
+.option-row:has(input:checked) {
+  border-color: var(--color-brand);
+  background: var(--color-brand-bg);
+}
+
+.option-row input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--color-brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option-row {
+    transition: none;
+  }
+  .option-row:active {
+    transform: none;
+  }
+}
+
+.text-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
+/* ---- Feedback de questão (seção 12) --------------------------------------- */
+
+.feedback-correct {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+}
+.feedback-incorrect {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+/* ---- Visually hidden (só para leitor de tela) ---------------------------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- Área administrativa (Módulo 12) -------------------------------------
+ * Reaproveita .app-shell/.app-sidebar/.app-main/.app-header/.card/
+ * .grid-cards/.btn/.badge/.text-input já existentes (Módulo 11) — as
+ * classes abaixo são só o que faltava para tabela/filtro/formulário
+ * administrativos, nenhuma reformulação do sistema visual. */
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.admin-table th {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.admin-table tbody tr:hover {
+  background: var(--color-surface-muted);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.admin-toolbar .field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 160px;
+}
+
+.admin-toolbar label,
+.form-grid label {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.form-grid .field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form-grid .field--full {
+  grid-column: 1 / -1;
+}
+
+/* Cartão de conquista (fase de redesign, seção 18) — desbloqueada ganha um
+ * leve verniz dourado (mesmo tom de `--color-xp`), bloqueada continua neutra. */
+.achievement-card--unlocked {
+  background: linear-gradient(160deg, rgba(124, 77, 255, 0.08) 0%, var(--color-surface) 75%);
+  border-color: rgba(124, 77, 255, 0.25);
+}
+
+.achievement-card--locked {
+  opacity: 0.75;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.stat-number {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.admin-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Navegação administrativa compacta para telas <1024px (a sidebar do
+ * `.app-sidebar` já some nesse ponto, seção 18 do prompt: "funcional em
+ * tablet, utilizável em celular quando fizer sentido"). */
+.admin-mobile-nav {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.admin-mobile-nav a {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.admin-mobile-nav a[data-active="true"] {
+  background: var(--color-brand-bg);
+  color: var(--color-brand-strong);
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .admin-mobile-nav {
+    display: none;
+  }
+}
+
+/* ---- Caminho de aprendizagem (fase de redesign, seção 9) ------------------
+ * A árvore Trilha→Área→Unidade→Etapa→Lição para de parecer uma lista/tabela
+ * administrativa e passa a ser um CAMINHO vertical de nós — sem SVG: uma
+ * linha central (`::before` do container) por trás dos nós, que alternam
+ * esquerda/centro/direita (`--pos-*`) por cima dela. Estados
+ * (`LessonAvailabilityStatus`, Módulo 8) só mudam a cor/ícone do nó — nenhum
+ * estado novo, só interpretação visual do que o serviço já devolve. */
+
+.lesson-path {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4) 0;
+}
+
+.lesson-path::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-border);
+  transform: translateX(-50%);
+  z-index: 0;
+}
+
+.lesson-path-group-label {
+  align-self: center;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  position: relative;
+  z-index: 1;
+}
+
+.lesson-node-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  z-index: 1;
+}
+
+/* Personagem "apontando" para a lição atual (fase de redesign profundo,
+ * seção 6: "recomendação: personagem apontando ou mensagem contextual") —
+ * só decorativo, sempre ao lado do nó, nunca sobrepondo (sem position:
+ * absolute — o flex da própria linha já resolve a vizinhança). */
+.lesson-node-pointer {
+  flex-shrink: 0;
+  animation: lesson-pointer-bob 1.8s ease-in-out infinite;
+}
+
+@keyframes lesson-pointer-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-node-pointer {
+    animation: none;
+  }
+}
+
+.lesson-node-row--left {
+  justify-content: flex-start;
+  padding-left: 12%;
+}
+.lesson-node-row--center {
+  justify-content: center;
+}
+.lesson-node-row--right {
+  justify-content: flex-end;
+  padding-right: 12%;
+}
+
+.lesson-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  width: 84px;
+}
+
+.lesson-node-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  font-size: 1.6rem;
+  border: 3px solid transparent;
+  transition:
+    transform var(--motion-base) var(--ease-bounce),
+    box-shadow var(--motion-base) ease;
+}
+
+.lesson-node[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.lesson-node:active .lesson-node-circle {
+  transform: scale(0.94);
+}
+
+.lesson-node-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: center;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lesson-node--locked .lesson-node-circle {
+  background: var(--color-surface-muted);
+  color: var(--color-text-subtle);
+  border-color: var(--color-border);
+}
+
+.lesson-node--available .lesson-node-circle {
+  background: var(--gradient-brand);
+  color: #ffffff;
+  box-shadow: var(--shadow-float);
+  animation: lesson-node-pulse 2.2s ease-in-out infinite;
+}
+
+/* Nó "atual" (fase de redesign profundo, seção 6: "atual: destaque maior")
+ * — só a primeira lição AVAILABLE da sequência ganha esse reforço extra por
+ * cima do estado `--available` (mesma cor, círculo maior + anel). */
+.lesson-node--current .lesson-node-circle {
+  width: 76px;
+  height: 76px;
+  box-shadow:
+    0 0 0 4px var(--color-brand-bg),
+    var(--shadow-float);
+}
+
+.lesson-node--current .lesson-node-label {
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.lesson-node--completed .lesson-node-circle {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.lesson-node--mastered .lesson-node-circle {
+  background: linear-gradient(135deg, var(--color-xp) 0%, #b39bff 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(124, 77, 255, 0.32);
+}
+
+@keyframes lesson-node-pulse {
+  0%,
+  100% {
+    box-shadow: var(--shadow-float);
+  }
+  50% {
+    box-shadow: 0 6px 24px rgba(91, 91, 240, 0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-node--available .lesson-node-circle {
+    animation: none;
+  }
+  .lesson-node-circle {
+    transition: none;
+  }
+  .lesson-node:active .lesson-node-circle {
+    transform: none;
+  }
+}
+
+/* ---- Personagens e microanimações (etapa de consolidação) -----------------
+ * Todas as animações abaixo são desativadas sob `prefers-reduced-motion`
+ * (seção 7 do prompt) — o conteúdo continua idêntico, só sem transição. */
+
+.character-message {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.character-message-avatar {
+  flex-shrink: 0;
+}
+
+.character-message-bubble {
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  flex: 1;
+  min-width: 0; /* filho de flex precisa disso para quebrar texto em vez de estourar a largura */
+  overflow-wrap: break-word;
+}
+
+.character-celebration {
+  animation: character-pop 0.4s ease-out;
+  background: linear-gradient(160deg, rgba(124, 77, 255, 0.1) 0%, var(--color-surface) 70%);
+  box-shadow: var(--shadow-pop);
+  border-color: transparent;
+}
+
+@keyframes character-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.character-bounce-in {
+  animation: character-bounce 0.5s ease-out;
+}
+
+@keyframes character-bounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Entrada suave de cards/listas — aplicada via .fade-in-up nos componentes
+ * que já existem, sem alterar layout (só opacidade/posição inicial). */
+.fade-in-up {
+  animation: fade-in-up 0.35s ease-out both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.xp-gain-pop {
+  animation: xp-gain-pop 0.6s ease-out;
+}
+
+@keyframes xp-gain-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) translateY(4px);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.1) translateY(-2px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .character-celebration,
+  .character-bounce-in,
+  .fade-in-up,
+  .xp-gain-pop {
+    animation: none !important;
+  }
+}

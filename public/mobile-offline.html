@@ -1,0 +1,83 @@
+<!doctype html>
+<!--
+  Página de erro de rede do wrapper Android (fase de build/teste APK).
+  Mostrada pela WebView nativa (`capacitor.config.ts`: `server.errorPath`)
+  SOMENTE quando o app não consegue nem carregar `server.url` (backend
+  inalcançável/sem internet) — diferente do `/offline` do PWA web (que é
+  uma rota Next.js real, servida pelo próprio backend). Este arquivo
+  precisa ser 100% estático e autocontido: se o backend está fora do ar,
+  nada que dependa dele pode ser usado aqui. Nenhum dado do estudante é
+  lido/gravado nesta tela — só uma mensagem clara e um botão para tentar
+  de novo.
+-->
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Estuda+ — Sem conexão</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f7f8fb;
+        color: #1a1a2e;
+        padding: 24px;
+        box-sizing: border-box;
+        padding-top: max(24px, env(safe-area-inset-top));
+        padding-bottom: max(24px, env(safe-area-inset-bottom));
+      }
+      .card {
+        max-width: 360px;
+        text-align: center;
+      }
+      .badge {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 16px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #5b5bf0 0%, #4444d1 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+      }
+      h1 {
+        font-size: 1.2rem;
+        margin: 0 0 8px;
+      }
+      p {
+        color: #5b5b6e;
+        line-height: 1.5;
+      }
+      button {
+        margin-top: 16px;
+        padding: 12px 20px;
+        min-height: 44px;
+        border-radius: 999px;
+        border: none;
+        background: #5b5bf0;
+        color: white;
+        font-weight: 700;
+        font-size: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="badge" aria-hidden="true">🧠</div>
+      <h1>Sem conexão com o Estuda+</h1>
+      <p>
+        Não conseguimos alcançar o servidor. Verifique sua internet e tente novamente — nenhuma
+        resposta ou progresso foi perdido.
+      </p>
+      <button onclick="window.location.reload()">Tentar de novo</button>
+    </div>
+  </body>
+</html>

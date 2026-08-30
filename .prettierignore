@@ -1,0 +1,9 @@
+node_modules
+.next
+.dev-db
+src/generated
+package-lock.json
+# Projeto nativo Android gerado pelo Capacitor (fase de produção/APK) —
+# arquivos de config/build própria do Gradle, não código deste projeto
+# formatado por Prettier.
+android

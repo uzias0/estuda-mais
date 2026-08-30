@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cores nativas do Android — mesmos tokens de marca já usados em toda a
+  aplicação web (`src/app/globals.css`: `--color-brand`/`--color-brand-strong`)
+  e no manifest PWA (`src/app/manifest.ts`: theme_color "#5b5bf0"). Nenhuma
+  identidade nova criada aqui, só espelhando a marca real do app.
+
+  ACHADO NA AUDITORIA (fase de fechamento/APK): o template gerado por
+  `npx cap add android` referencia `@color/colorPrimary`/`colorPrimaryDark`/
+  `colorAccent` em `styles.xml`, mas não cria este arquivo — sem ele, o
+  build Gradle falharia por recurso de cor inexistente. Corrigido aqui.
+-->
+<resources>
+    <color name="colorPrimary">#5b5bf0</color>
+    <color name="colorPrimaryDark">#4444d1</color>
+    <color name="colorAccent">#4444d1</color>
+</resources>

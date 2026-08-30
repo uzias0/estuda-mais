@@ -1,0 +1,1430 @@
+// ============================================================================
+// SCHEMA v3 — Plataforma de Aprendizagem + Enciclopédia Acadêmica de Psicologia
+// Documento de arquitetura — NÃO aplicado ainda (sem migration executada).
+// ============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// NOTA — validado com Prisma CLI 7.9.1 (`npx prisma validate`) em 2026-08-18:
+// na major 7 do Prisma, `url` deixou de ser aceita dentro do bloco datasource
+// do schema.prisma; a conexão passa a ser configurada em `prisma.config.ts`
+// (adapter para Client, migrate.adapter/url para Migrate). A sintaxe exata
+// desse arquivo fica para o Módulo 1 (depende da doc oficial da versão
+// instalada no momento do scaffold) — não fixada aqui para não arriscar
+// documentar uma API que pode mudar até lá.
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS ESTRUTURAIS (conjuntos fechados, mudam raramente por design)
+// ============================================================================
+
+enum Role {
+  STUDENT
+  CONTENT_EDITOR
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+enum PublicationStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum StudyMode {
+  FORMACAO
+  FACULDADE
+  VESTIBULAR
+  CONCURSO
+  REVISAO
+  DESAFIO
+  SIMULADO
+}
+
+enum StageType {
+  LESSON
+  REVIEW
+  CHECKPOINT
+  CHALLENGE
+}
+
+enum BlockType {
+  INTRO
+  CONCEPT
+  EXAMPLE
+  QUESTION
+  CONCLUSION
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  MATCHING
+  ORDERING
+  FILL_BLANK
+  SHORT_ANSWER
+  CASE_STUDY
+  MULTI_SELECT
+}
+
+// DIAGNOSTIC adicionado no Módulo 3 (docs/MODULO-3.md, "Decisões técnicas") —
+// o diagnóstico inicial precisa distinguir suas tentativas das demais sem
+// string mágica; alteração aditiva, os 4 valores anteriores não mudam.
+enum AttemptContext {
+  LESSON
+  REVIEW
+  CHALLENGE
+  SIMULATION
+  DIAGNOSTIC
+}
+
+enum Difficulty {
+  INICIANTE
+  BASICO
+  INTERMEDIARIO
+  AVANCADO
+  DOMINIO
+}
+
+enum ProgressStatus {
+  LOCKED
+  AVAILABLE
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ChallengeType {
+  DAILY
+  WEEKLY
+  EVENT
+}
+
+enum SourceType {
+  AUTORAL
+  LICENCIADO
+  OFICIAL
+  ACADEMICA
+  DIDATICA
+  ADMINISTRATIVA
+  EXTERNA
+}
+
+enum SourceClass {
+  PRIMARIA
+  SECUNDARIA
+  OFICIAL
+  ACADEMICA
+  DIDATICA
+}
+
+enum LegalStatus {
+  VIGENTE
+  REVOGADA
+  SUSPENSA
+  SUBSTITUIDA
+}
+
+enum AcademicWorkType {
+  LIVRO
+  ARTIGO
+  ENSAIO
+  EXPERIMENTO_PUBLICADO
+  DOCUMENTO
+  TEORIA_PUBLICADA
+  OUTRO
+}
+
+enum AcademicWorkRole {
+  AUTOR
+  COAUTOR
+  ORGANIZADOR
+  TRADUTOR
+}
+
+// ---- Módulo 7 — Biblioteca e Atualidades ----------------------------------
+
+// Tipos de material da biblioteca (Módulo 7, seção 5 do prompt) — lista
+// literal pedida, sem tipos extras não solicitados.
+enum LibraryMaterialType {
+  LIVRO
+  EBOOK
+  ARTIGO
+  MONOGRAFIA
+  TESE
+  DISSERTACAO
+  MATERIAL_DIDATICO
+  DOCUMENTO
+  OUTRO
+}
+
+// Por que um material é gratuito/legal (Módulo 7, seção 6) — nunca aceitar
+// `isFree=true` sem justificativa rastreável; `LibraryItem.freeAccessReason`
+// é obrigatório quando `isFree=true` (validado em `library.service.ts`, não
+// só no Zod, pelo mesmo motivo de `assertQuestionShapeValid` no Módulo 3:
+// regra cruzando campos).
+enum FreeAccessReason {
+  PUBLIC_DOMAIN
+  OPEN_LICENSE
+  AUTHOR_PROVIDED
+  INSTITUTIONAL_ACCESS
+  OFFICIAL_FREE_ACCESS
+}
+
+// Relevância acadêmica editorial de uma atualidade (Módulo 7, seção 8) —
+// julgamento explícito do curador no momento da criação/edição, não
+// derivado de nenhum cálculo (não existe fórmula objetiva de "relevância de
+// uma notícia" — é sempre decisão humana, rastreável e auditável).
+enum CurrentAffairRelevance {
+  LOW
+  MODERATE
+  HIGH
+}
+
+// Conjunto fechado dos TIPOS DE NÓ do grafo de conhecimento.
+// Usado por AcademicRelation (sourceType/targetType) e por
+// QuestionKnowledgeTag/LessonKnowledgeTag (entityType).
+// NÃO confundir com CitationEntityType (ver abaixo) — conjuntos
+// deliberadamente diferentes (item 6 da revisão solicitada).
+enum KnowledgeEntityType {
+  PERSON
+  WORK
+  THEORY
+  CONCEPT
+  SCHOOL
+  DISCIPLINE
+  PERIOD
+  DEVELOPMENTAL_STAGE
+}
+
+// Conjunto fechado de entidades que podem RECEBER uma Citation.
+// Inclui itens que KnowledgeEntityType não inclui (QUESTION, LESSON,
+// EXAM_EDITION, ACADEMIC_RELATION) porque citação é uma preocupação de
+// procedência, não de grafo acadêmico — não são a mesma coisa.
+enum CitationEntityType {
+  PERSON
+  WORK
+  THEORY
+  CONCEPT
+  SCHOOL
+  DISCIPLINE
+  QUESTION
+  LESSON
+  EXAM_EDITION
+  ACADEMIC_RELATION
+}
+
+// Conjunto fechado de entidades auditáveis (curadoria/versionamento).
+// Deliberadamente mais amplo que CitationEntityType: inclui nós puramente
+// pedagógicos (Track/LearningArea/Unit/Stage) e a própria Source, que não
+// fazem sentido como alvo de Citation mas precisam de trilha de auditoria.
+//
+// PERIOD/DEVELOPMENTAL_STAGE/TAG adicionados no Módulo 2 (docs/MODULO-2.md,
+// "Decisões técnicas") — lacuna descoberta ao implementar os serviços dessas
+// três entidades da Base de Conhecimento, que também precisam de trilha de
+// auditoria mesmo não tendo `status`/publicação. Adição aditiva de valores de
+// enum, sem remover/renomear nada existente.
+//
+// EXAM/EXAM_BOARD/ORGANIZATION/POSITION adicionados no Módulo 3
+// (docs/MODULO-3.md, "Decisões técnicas") — mesma lacuna: só `EXAM_EDITION`
+// existia, mas `Exam`/`ExamBoard`/`Organization`/`Position` também são
+// entidades curadas (têm `status`/CRUD próprio) e precisam de auditoria
+// correta, não atribuída a um entityType vizinho por conveniência.
+enum AuditableEntityType {
+  PERSON
+  WORK
+  THEORY
+  CONCEPT
+  SCHOOL
+  DISCIPLINE
+  QUESTION
+  LESSON
+  EXAM_EDITION
+  ACADEMIC_RELATION
+  LEGAL_REFERENCE
+  SOURCE
+  TRACK
+  LEARNING_AREA
+  UNIT
+  STAGE
+  PERIOD
+  DEVELOPMENTAL_STAGE
+  TAG
+  EXAM
+  EXAM_BOARD
+  ORGANIZATION
+  POSITION
+  // Adicionado no Módulo 6 (docs/MODULO-6.md, "Decisões técnicas") — mesma
+  // lacuna já corrigida nos Módulos 2/3/4: `Simulation` ganha CRUD/publish/
+  // archive próprios neste módulo e precisa de auditoria correta.
+  SIMULATION
+  // Adicionados no Módulo 7 (docs/MODULO-7.md, "Decisões técnicas") —
+  // `LibraryItem`/`CurrentAffair` são as novas entidades curadas deste
+  // módulo, mesma lacuna recorrente dos módulos anteriores.
+  LIBRARY_ITEM
+  CURRENT_AFFAIR
+}
+
+// Escopo de um item de revisão espaçada — ver seção 7 do relatório.
+enum ReviewScope {
+  QUESTION
+  CONCEPT
+}
+
+// Estado determinístico do ciclo de revisão espaçada (Módulo 5,
+// docs/MODULO-5.md, seção 7). Persistido (não puramente derivado) porque
+// SUSPENDED é uma ação explícita que nenhuma fórmula consegue reconstituir
+// a posteriori — e, uma vez com um campo de estado persistido para esse
+// caso, é mais simples manter todos os 5 valores como uma única fonte de
+// verdade gravada pelo servidor a cada transição, em vez de misturar
+// "estado derivado" com "estado persistido" no mesmo model.
+enum ReviewState {
+  NEW
+  LEARNING
+  REVIEW
+  MASTERED
+  SUSPENDED
+}
+
+// Estado de execução de uma Lesson por um usuário (Módulo 8). Inteiramente
+// distinto de `ProgressStatus` (LOCKED/AVAILABLE/IN_PROGRESS/COMPLETED, dono
+// de `Progress`, por Stage, nunca escrito por nenhum serviço até aqui — ver
+// docs/MODULO-8.md, "Análise inicial"): aqui não existe LOCKED/AVAILABLE
+// persistido — desbloqueio é sempre DERIVADO da ordem estrutural existente
+// (`learning-unlock.service.ts`), nunca gravado. MASTERED exige evidência de
+// desempenho (`LESSON_MASTERY_THRESHOLD`), não é alcançável por decreto do
+// cliente.
+enum LessonProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  MASTERED
+}
+
+// ============================================================================
+// IDENTIDADE
+// ============================================================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  role         Role     @default(STUDENT)
+  createdAt    DateTime @default(now())
+
+  profile             Profile?
+  progress            Progress[]
+  attempts            QuestionAttempt[]
+  sessions            StudySession[]
+  mastery             TopicMastery[]
+  reviewItems         ReviewItem[]
+  reviewLogs          ReviewLog[]
+  lessonProgress      LessonProgress[]
+  gamificationEvents  GamificationEvent[]
+  achievements        UserAchievement[]
+  streak              Streak?
+  dailyGoal           DailyGoal?
+  simAttempts         SimulationAttempt[]
+  createdSimulations  Simulation[]
+  subscription        Subscription?
+  auditLogs           ContentAuditLog[]
+  authSessions        AuthSession[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@index([role])
+}
+
+// Etapa de consolidação — autenticação real (substitui o mock de
+// desenvolvimento `devActor.ts` como autoridade de `Actor` nas rotas/Server
+// Actions de produção; `devActor.ts` permanece só para testes/scripts,
+// nunca mais para servir uma requisição real). Nome `AuthSession` (não
+// `Session`) para não colidir com `sessions: StudySession[]`, já existente
+// em `User` desde o Módulo 1 (sessão de ESTUDO, conceito inteiramente
+// diferente de sessão de LOGIN).
+//
+// `id` é o próprio token opaco guardado no cookie (não um JWT auto-contido)
+// — revogável de verdade (basta apagar a linha) e sem segredo de assinatura
+// para gerenciar; o custo é uma consulta ao banco por requisição
+// autenticada, aceitável no volume atual do produto.
+model AuthSession {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// Recuperação de senha (etapa de fechamento, seção 10: "recuperação de
+// senha") — mesmo padrão de `AuthSession`: `id` é o próprio token opaco
+// (nunca colocado em texto puro em lugar nenhum além da URL enviada por
+// e-mail), de uso único (`usedAt`) e com expiração curta (1h, decidido em
+// `password-reset.service.ts`). O ENVIO do e-mail em si depende de um
+// provedor externo (Resend/SendGrid/SES) não configurado neste ambiente —
+// ver `src/server/auth/email-sender.ts`; este model só guarda o token, não
+// o conteúdo do e-mail.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Profile {
+  userId        String    @id
+  name          String
+  avatarUrl     String?
+  preferredMode StudyMode @default(FORMACAO)
+  xp            Int       @default(0)
+  level         Int       @default(1)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ============================================================================
+// BASE DE CONHECIMENTO — dona da verdade acadêmica
+// ============================================================================
+
+model Discipline {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  name        String
+  description String?
+  status      PublicationStatus @default(DRAFT)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  schools School[] // implícita N:N (sem coluna extra necessária)
+  units   Unit[] // 1:N via Unit.primaryDisciplineId
+
+  @@index([status])
+}
+
+model School {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  name        String
+  description String?
+  status      PublicationStatus @default(DRAFT)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  disciplines Discipline[] // implícita N:N
+  theories    Theory[] // implícita N:N
+  units       Unit[] // 1:N via Unit.primarySchoolId
+
+  @@index([status])
+}
+
+model Theory {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  name           String
+  description    String?
+  originPeriodId String?
+  status         PublicationStatus @default(DRAFT)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  originPeriod HistoricalPeriod? @relation(fields: [originPeriodId], references: [id])
+  schools      School[] // implícita N:N
+  concepts     Concept[] // implícita N:N
+
+  @@index([status])
+  @@index([originPeriodId])
+}
+
+model Concept {
+  id                   String            @id @default(cuid())
+  slug                 String            @unique
+  name                 String
+  definition           String
+  didacticExplanation  String?
+  difficulty           Difficulty?
+  developmentalStageId String?
+  status               PublicationStatus @default(DRAFT)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  developmentalStage DevelopmentalStage? @relation(fields: [developmentalStageId], references: [id])
+  theories           Theory[] // implícita N:N
+  works              AcademicWork[] // implícita N:N ("obra apresenta conceito")
+  tags               Tag[] // implícita N:N
+  reviewItems        ReviewItem[] // 1:N via ReviewItem.conceptId (revisão no nível do conceito)
+
+  @@index([status])
+  @@index([developmentalStageId])
+}
+
+model AcademicPerson {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  name           String
+  fullName       String?
+  displayName    String?
+  bio            String?
+  birthDate      DateTime?
+  deathDate      DateTime?
+  periodId       String?
+  countryContext String?
+  imageUrl       String?
+  status         PublicationStatus @default(DRAFT)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  period HistoricalPeriod?    @relation(fields: [periodId], references: [id])
+  works  AcademicWorkAuthor[]
+  tags   Tag[] // implícita N:N
+
+  @@index([status])
+  @@index([periodId])
+}
+
+model AcademicWork {
+  id        String            @id @default(cuid())
+  title     String
+  subtitle  String?
+  year      Int?
+  type      AcademicWorkType
+  isbn      String?
+  doi       String?
+  sourceId  String? // procedência bibliográfica OPCIONAL e secundária — ver política na seção 6 do relatório
+  status    PublicationStatus @default(DRAFT)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  source      Source?              @relation(fields: [sourceId], references: [id])
+  authors     AcademicWorkAuthor[]
+  concepts    Concept[] // implícita N:N
+  libraryItem LibraryItem?
+
+  @@index([status])
+  @@index([sourceId])
+}
+
+model AcademicWorkAuthor {
+  personId String
+  workId   String
+  role     AcademicWorkRole @default(AUTOR)
+
+  person AcademicPerson @relation(fields: [personId], references: [id])
+  work   AcademicWork   @relation(fields: [workId], references: [id])
+
+  @@id([personId, workId])
+  @@index([workId])
+}
+
+model HistoricalPeriod {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  startYear   Int?
+  endYear     Int?
+  description String?
+
+  people   AcademicPerson[]
+  theories Theory[]
+
+  @@index([startYear, endYear])
+}
+
+model DevelopmentalStage {
+  id    String @id @default(cuid())
+  slug  String @unique
+  name  String
+  order Int
+
+  concepts Concept[]
+
+  @@index([order])
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  slug String @unique
+  name String
+
+  concepts       Concept[] // implícita N:N
+  people         AcademicPerson[] // implícita N:N
+  questions      Question[] // implícita N:N
+  currentAffairs CurrentAffair[] // implícita N:N
+}
+
+// ---- Grafo de conhecimento genérico -----------------------------------
+// Sem FK nativa em sourceId/targetId: entityId aponta para uma de várias
+// tabelas dependendo de sourceType/targetType (KnowledgeEntityType), e o
+// Postgres/Prisma não suporta FK polimórfica de verdade. Integridade
+// garantida em camada de aplicação (ver seção 4/5 do relatório) + job de
+// auditoria periódico. relationType é String validada por allow-list em
+// código (config/relation-types.ts), não enum de banco, para poder crescer
+// sem migration — decisão deliberada, distinta de KnowledgeEntityType.
+model AcademicRelation {
+  id           String              @id @default(cuid())
+  sourceType   KnowledgeEntityType
+  sourceId     String
+  relationType String
+  targetType   KnowledgeEntityType
+  targetId     String
+  description  String?
+  citationId   String?
+  status       PublicationStatus   @default(DRAFT)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  citation Citation? @relation(fields: [citationId], references: [id])
+
+  @@unique([sourceType, sourceId, relationType, targetType, targetId], name: "uniqRelationEdge")
+  @@index([sourceType, sourceId])
+  @@index([targetType, targetId])
+  @@index([relationType])
+}
+
+// ============================================================================
+// CURADORIA E FONTES (transversal)
+// ============================================================================
+
+model Source {
+  id             String            @id @default(cuid())
+  name           String
+  sourceType     SourceType
+  classification SourceClass?
+  author         String?
+  institution    String?
+  url            String?
+  doi            String?
+  isbn           String?
+  license        String?
+  publishedAt    DateTime?
+  accessedAt     DateTime?
+  version        String?
+  rightsNote     String?
+  status         PublicationStatus @default(DRAFT)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  legalReference LegalReference?
+  citations      Citation[]
+  academicWorks  AcademicWork[]
+  examEditions   ExamEdition[]
+  questions      Question[]
+  libraryItems   LibraryItem[]
+  currentAffairs CurrentAffair[]
+
+  @@index([status])
+  @@index([sourceType])
+}
+
+model LegalReference {
+  sourceId       String      @id
+  jurisdiction   String?
+  legalStatus    LegalStatus @default(VIGENTE)
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
+  supersededById String?
+
+  source       Source           @relation(fields: [sourceId], references: [id])
+  supersededBy LegalReference?  @relation("LegalReferenceSupersession", fields: [supersededById], references: [sourceId])
+  supersedes   LegalReference[] @relation("LegalReferenceSupersession")
+
+  @@index([legalStatus])
+}
+
+// entityId sem FK nativa (polimórfico via CitationEntityType) — sourceId
+// É uma FK real e não-polimórfica (aponta sempre para Source).
+model Citation {
+  id         String             @id @default(cuid())
+  entityType CitationEntityType
+  entityId   String
+  sourceId   String
+  note       String?
+
+  source            Source             @relation(fields: [sourceId], references: [id])
+  academicRelations AcademicRelation[]
+
+  @@index([entityType, entityId])
+  @@index([sourceId])
+}
+
+model ContentAuditLog {
+  id          String              @id @default(cuid())
+  entityType  AuditableEntityType
+  entityId    String
+  action      String
+  actorUserId String
+  snapshot    Json?
+  createdAt   DateTime            @default(now())
+
+  actor User @relation(fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+}
+
+// ============================================================================
+// BIBLIOTECA E ATUALIDADES (Módulo 7) — camada de contextualização
+//
+// Duas entidades NOVAS, deliberadamente enxutas — todo relacionamento com a
+// Base de Conhecimento (Concept/Theory/School/Discipline/Person/Work/Period/
+// DevelopmentalStage) reaproveita o MESMO mecanismo polimórfico já usado por
+// `LessonKnowledgeTag`/`QuestionKnowledgeTag` (Módulos 4/3): um join
+// `{Entidade}KnowledgeTag` contra `KnowledgeEntityType`, resolvido via
+// `resolveEntity`/`entityExists` (Módulo 1/2) — nenhum mecanismo polimórfico
+// novo. A descoberta de relação com a árvore PEDAGÓGICA (Track/Area/Unit/
+// Stage/Lesson) não usa FK própria nenhuma: é derivada em tempo de consulta
+// a partir dos mesmos conceitos tagueados, via
+// `pedagogy-query.service.getPedagogicalContextForConcepts` (Módulo 6) — ver
+// docs/MODULO-7.md, seção "Relação com pedagogia".
+//
+// `AcademicWork` NÃO foi duplicado: quando um item de biblioteca É uma obra
+// já rastreada academicamente, `LibraryItem.academicWorkId` aponta para ela
+// (FK real, 1:1) em vez de copiar título/ano/tipo/autoria. Quando não há
+// essa correspondência (ex.: um documento institucional qualquer), o item
+// permanece autônomo com seus próprios `title`/`authorName`.
+//
+// `Source` NÃO foi duplicado: `url`/`license`/`author`/`publishedAt` já
+// existem lá (Módulo 2) — `LibraryItem.sourceId`/`CurrentAffair.sourceId`
+// são FKs reais obrigatórias (mesmo padrão de procedência de `Question`,
+// Módulo 3: procedência = FK direta, não o gate de Citation usado por
+// Concept/Theory/School/Discipline/Person/Lesson).
+// ============================================================================
+
+model LibraryItem {
+  id               String              @id @default(cuid())
+  title            String
+  description      String?
+  authorName       String? // fallback quando não há AcademicWork/AcademicPerson rastreado
+  academicWorkId   String?             @unique
+  materialType     LibraryMaterialType
+  language         String? // ex.: "pt-BR" — livre, não enum (evita lista fechada arbitrária de idiomas)
+  year             Int?
+  isFree           Boolean             @default(false)
+  freeAccessReason FreeAccessReason?
+  sourceId         String
+  status           PublicationStatus   @default(DRAFT)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  academicWork  AcademicWork?             @relation(fields: [academicWorkId], references: [id])
+  source        Source                    @relation(fields: [sourceId], references: [id])
+  knowledgeTags LibraryItemKnowledgeTag[]
+
+  @@index([status])
+  @@index([materialType])
+  @@index([sourceId])
+  @@index([isFree])
+}
+
+// entityId sem FK nativa (polimórfico via KnowledgeEntityType) — libraryItemId
+// é a única FK real desta tabela (mesmo padrão de LessonKnowledgeTag).
+model LibraryItemKnowledgeTag {
+  libraryItemId String
+  entityType    KnowledgeEntityType
+  entityId      String
+
+  libraryItem LibraryItem @relation(fields: [libraryItemId], references: [id])
+
+  @@id([libraryItemId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+model CurrentAffair {
+  id                 String                 @id @default(cuid())
+  title              String
+  summary            String
+  educationalContent String?
+  // Data do ACONTECIMENTO real — nunca `createdAt` (Módulo 7, seção 13). A
+  // "data da publicação" da fonte já existe em `Source.publishedAt`; a "data
+  // da última atualização" já existe via `updatedAt` — nenhum dos dois é
+  // duplicado aqui.
+  eventDate          DateTime
+  validUntil         DateTime? // período de validade/relevância, quando aplicável
+  relevance          CurrentAffairRelevance @default(MODERATE)
+  sourceId           String
+  status             PublicationStatus      @default(DRAFT)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  source        Source                      @relation(fields: [sourceId], references: [id])
+  knowledgeTags CurrentAffairKnowledgeTag[]
+  tags          Tag[] // reaproveita Tag (Módulo 2) — mesmo mecanismo transversal de Concept/AcademicPerson/Question
+
+  @@index([status])
+  @@index([eventDate])
+  @@index([sourceId])
+}
+
+// entityId sem FK nativa (polimórfico via KnowledgeEntityType) — currentAffairId
+// é a única FK real desta tabela (mesmo padrão de LessonKnowledgeTag).
+model CurrentAffairKnowledgeTag {
+  currentAffairId String
+  entityType      KnowledgeEntityType
+  entityId        String
+
+  currentAffair CurrentAffair @relation(fields: [currentAffairId], references: [id])
+
+  @@id([currentAffairId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+// ============================================================================
+// NÚCLEO PEDAGÓGICO — curadoria sobre a Base de Conhecimento
+// Track ⇄ LearningArea ⇄ Unit ⇄ Stage ⇄ Lesson são TODOS N:N via joins com
+// `order` próprio — decisão explícita (seção 8 do relatório): qualquer nó
+// pedagógico pode ser reaproveitado em mais de um pai sem duplicar conteúdo.
+// ============================================================================
+
+model Track {
+  id     String            @id @default(cuid())
+  slug   String            @unique
+  name   String
+  mode   StudyMode
+  status PublicationStatus @default(DRAFT)
+
+  areas TrackArea[]
+}
+
+model TrackArea {
+  trackId String
+  areaId  String
+  order   Int
+
+  track Track        @relation(fields: [trackId], references: [id])
+  area  LearningArea @relation(fields: [areaId], references: [id])
+
+  @@id([trackId, areaId])
+  @@index([areaId])
+}
+
+model LearningArea {
+  id     String            @id @default(cuid())
+  slug   String            @unique
+  name   String
+  status PublicationStatus @default(DRAFT)
+
+  tracks TrackArea[]
+  units  AreaUnit[]
+}
+
+model AreaUnit {
+  areaId String
+  unitId String
+  order  Int
+
+  area LearningArea @relation(fields: [areaId], references: [id])
+  unit Unit         @relation(fields: [unitId], references: [id])
+
+  @@id([areaId, unitId])
+  @@index([unitId])
+}
+
+model Unit {
+  id                  String            @id @default(cuid())
+  name                String
+  primaryDisciplineId String? // âncora acadêmica opcional — não obrigatória
+  primarySchoolId     String?
+  status              PublicationStatus @default(DRAFT)
+
+  primaryDiscipline Discipline? @relation(fields: [primaryDisciplineId], references: [id])
+  primarySchool     School?     @relation(fields: [primarySchoolId], references: [id])
+  areas             AreaUnit[]
+  stages            UnitStage[]
+
+  @@index([primaryDisciplineId])
+  @@index([primarySchoolId])
+}
+
+model UnitStage {
+  unitId  String
+  stageId String
+  order   Int
+
+  unit  Unit  @relation(fields: [unitId], references: [id])
+  stage Stage @relation(fields: [stageId], references: [id])
+
+  @@id([unitId, stageId])
+  @@index([stageId])
+}
+
+model Stage {
+  id       String            @id @default(cuid())
+  name     String
+  type     StageType         @default(LESSON)
+  xpReward Int               @default(10)
+  status   PublicationStatus @default(DRAFT)
+
+  units         UnitStage[]
+  lessons       StageLesson[]
+  progress      Progress[]
+  studySessions StudySession[]
+
+  @@index([status])
+}
+
+model StageLesson {
+  stageId  String
+  lessonId String
+  order    Int    @default(0)
+
+  stage  Stage  @relation(fields: [stageId], references: [id])
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+
+  @@id([stageId, lessonId])
+  @@index([lessonId])
+}
+
+model Lesson {
+  id     String            @id @default(cuid())
+  title  String
+  status PublicationStatus @default(DRAFT)
+
+  blocks        LessonBlock[]
+  stages        StageLesson[]
+  knowledgeTags LessonKnowledgeTag[]
+  progress      LessonProgress[]
+
+  @@index([status])
+}
+
+model LessonBlock {
+  id         String    @id @default(cuid())
+  lessonId   String
+  order      Int
+  type       BlockType
+  content    String?
+  questionId String?
+
+  lesson      Lesson                  @relation(fields: [lessonId], references: [id])
+  question    Question?               @relation(fields: [questionId], references: [id])
+  completions LessonBlockCompletion[]
+
+  @@unique([lessonId, order])
+  @@index([questionId])
+}
+
+// entityId sem FK nativa (polimórfico via KnowledgeEntityType) — lessonId
+// é a única FK real desta tabela.
+model LessonKnowledgeTag {
+  lessonId   String
+  entityType KnowledgeEntityType
+  entityId   String
+
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+
+  @@id([lessonId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+// ============================================================================
+// BASE DE AVALIAÇÕES
+// ============================================================================
+
+model Exam {
+  id     String            @id @default(cuid())
+  slug   String            @unique
+  name   String
+  status PublicationStatus @default(DRAFT)
+
+  editions ExamEdition[]
+}
+
+model ExamEdition {
+  id             String            @id @default(cuid())
+  examId         String
+  name           String
+  year           Int
+  examBoardId    String?
+  organizationId String?
+  positionId     String?
+  sourceId       String?
+  status         PublicationStatus @default(DRAFT)
+
+  exam         Exam          @relation(fields: [examId], references: [id])
+  examBoard    ExamBoard?    @relation(fields: [examBoardId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  position     Position?     @relation(fields: [positionId], references: [id])
+  source       Source?       @relation(fields: [sourceId], references: [id])
+  questions    Question[]
+
+  @@index([examId])
+  @@index([examBoardId])
+  @@index([organizationId])
+  @@index([positionId])
+  @@index([year])
+}
+
+model ExamBoard {
+  id     String            @id @default(cuid())
+  slug   String            @unique
+  name   String
+  status PublicationStatus @default(DRAFT)
+
+  editions ExamEdition[]
+}
+
+model Organization {
+  id     String            @id @default(cuid())
+  slug   String            @unique
+  name   String
+  status PublicationStatus @default(DRAFT)
+
+  editions ExamEdition[]
+}
+
+model Position {
+  id     String            @id @default(cuid())
+  slug   String            @unique
+  name   String
+  status PublicationStatus @default(DRAFT)
+
+  editions ExamEdition[]
+}
+
+model Question {
+  id                  String            @id @default(cuid())
+  prompt              String
+  type                QuestionType
+  explanation         String?
+  difficulty          Difficulty
+  subject             String? // BOOTSTRAP TRANSITÓRIO — nunca fonte de verdade (ver seção 6)
+  subtopic            String? // BOOTSTRAP TRANSITÓRIO — nunca fonte de verdade (ver seção 6)
+  examEditionId       String? // null = questão autoral avulsa (sem prova de origem)
+  sourceId            String // obrigatória — toda questão tem procedência (ver seção 3)
+  reproductionAllowed Boolean           @default(true)
+  correctRate         Float?
+  answerCount         Int               @default(0)
+  reviewStatus        PublicationStatus @default(DRAFT)
+  // Adicionado no Módulo 3 (docs/MODULO-3.md, "Decisões técnicas") — resposta
+  // canônica para os tipos que `QuestionOption` não comporta corretamente
+  // (MATCHING, FILL_BLANK, SHORT_ANSWER; opcionalmente CASE_STUDY quando não
+  // usar options). Formato `{ kind: "MATCHING"|"FILL_BLANK"|"SHORT_ANSWER", ... }`
+  // validado por Zod na camada de aplicação — mesmo padrão já usado em
+  // QuestionAttempt.answerData/Achievement.criteria/Simulation.config, não um
+  // mecanismo novo. Nulo para MULTIPLE_CHOICE/TRUE_FALSE/MULTI_SELECT/ORDERING,
+  // que continuam usando exclusivamente QuestionOption.
+  answerKey           Json?
+
+  examEdition   ExamEdition?           @relation(fields: [examEditionId], references: [id])
+  source        Source                 @relation(fields: [sourceId], references: [id])
+  options       QuestionOption[]
+  knowledgeTags QuestionKnowledgeTag[]
+  tags          Tag[] // implícita N:N
+  attempts      QuestionAttempt[]
+  lessonBlocks  LessonBlock[]
+  simulations   SimulationQuestion[]
+  reviewItems   ReviewItem[]
+
+  @@index([examEditionId])
+  @@index([sourceId])
+  @@index([difficulty])
+  @@index([reviewStatus])
+}
+
+model QuestionOption {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean
+  order      Int
+
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@index([questionId])
+}
+
+// entityId sem FK nativa (polimórfico via KnowledgeEntityType) — questionId
+// é a única FK real desta tabela.
+model QuestionKnowledgeTag {
+  questionId String
+  entityType KnowledgeEntityType
+  entityId   String
+
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@id([questionId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+// ============================================================================
+// PROGRESSO, TENTATIVAS, MASTERY, REVISÃO
+// ============================================================================
+
+model Progress {
+  userId      String
+  stageId     String
+  status      ProgressStatus @default(LOCKED)
+  score       Float?
+  attempts    Int            @default(0)
+  completedAt DateTime?
+
+  user  User  @relation(fields: [userId], references: [id])
+  stage Stage @relation(fields: [stageId], references: [id])
+
+  @@id([userId, stageId])
+  @@index([stageId])
+}
+
+model StudySession {
+  id        String    @id @default(cuid())
+  userId    String
+  mode      StudyMode
+  stageId   String?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  xpEarned  Int       @default(0)
+
+  user     User              @relation(fields: [userId], references: [id])
+  stage    Stage?            @relation(fields: [stageId], references: [id])
+  attempts QuestionAttempt[]
+
+  @@index([userId])
+  @@index([stageId])
+}
+
+model QuestionAttempt {
+  id           String         @id @default(cuid())
+  userId       String
+  questionId   String
+  answerData   Json
+  isCorrect    Boolean
+  timeSpentMs  Int
+  context      AttemptContext
+  sessionId    String?
+  simAttemptId String?
+  createdAt    DateTime       @default(now())
+
+  user                  User                   @relation(fields: [userId], references: [id])
+  question              Question               @relation(fields: [questionId], references: [id])
+  session               StudySession?          @relation(fields: [sessionId], references: [id])
+  simAttempt            SimulationAttempt?     @relation(fields: [simAttemptId], references: [id])
+  reviewLog             ReviewLog?
+  lessonBlockCompletion LessonBlockCompletion?
+
+  @@index([userId])
+  @@index([questionId])
+  @@index([sessionId])
+  @@index([simAttemptId])
+}
+
+// entityId sem FK nativa (polimórfico via KnowledgeEntityType) — não existe
+// coluna própria por tipo porque mastery é calculada tipicamente sobre
+// Concept, mas o mesmo mecanismo serve para rollups manuais em Theory/School.
+model TopicMastery {
+  userId          String
+  entityType      KnowledgeEntityType
+  entityId        String
+  masteryScore    Float               @default(0)
+  correctCount    Int                 @default(0)
+  incorrectCount  Int                 @default(0)
+  reviewCount     Int                 @default(0)
+  lastPracticedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([userId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+// scope determina qual dos dois (questionId XOR conceptId) é obrigatório.
+// Prisma/Postgres não expressam essa exclusividade nativamente no DSL —
+// reforçada por CHECK constraint via migration SQL manual (ver seção 10
+// do relatório) + validação obrigatória na camada de domínio.
+model ReviewItem {
+  id             String      @id @default(cuid())
+  userId         String
+  scope          ReviewScope
+  questionId     String?
+  conceptId      String?
+  dueAt          DateTime
+  intervalDays   Int         @default(1)
+  easeFactor     Float       @default(2.5)
+  repetitions    Int         @default(0)
+  // Adicionado no Módulo 5 (docs/MODULO-5.md, seção 7) — estado determinístico
+  // do ciclo de revisão espaçada. Aditivo: nenhum campo/linha existente muda.
+  state          ReviewState @default(NEW)
+  lastReviewedAt DateTime?
+  createdAt      DateTime    @default(now())
+
+  user     User        @relation(fields: [userId], references: [id])
+  question Question?   @relation(fields: [questionId], references: [id])
+  concept  Concept?    @relation(fields: [conceptId], references: [id])
+  logs     ReviewLog[]
+
+  @@index([userId, dueAt])
+  @@index([questionId])
+  @@index([conceptId])
+  @@index([state])
+}
+
+// Histórico append-only de eventos de revisão (Módulo 5, seção 8) — nunca
+// sobrescrito/atualizado após criado. Guarda exatamente a informação que
+// `QuestionAttempt` NÃO guarda (intervalo anterior/calculado, próximo
+// vencimento, estado anterior/novo, origem da revisão) — não duplica
+// `answerData`/`timeSpentMs`/etc., que continuam só em `QuestionAttempt`
+// (via `questionAttemptId`). `isCorrect` é denormalizado deliberadamente
+// (mesmo padrão já usado em `Question.correctRate`/`answerCount`): é um fato
+// histórico estável (nunca muda depois de gravado) e evita um join extra em
+// toda consulta de desempenho/fila.
+model ReviewLog {
+  id                   String      @id @default(cuid())
+  reviewItemId         String
+  userId               String
+  questionAttemptId    String      @unique
+  isCorrect            Boolean
+  previousState        ReviewState
+  newState             ReviewState
+  previousIntervalDays Int
+  newIntervalDays      Int
+  dueAtBefore          DateTime
+  dueAtAfter           DateTime
+  // Vocabulário validado em código (mesmo padrão de `ContentAuditLog.action`/
+  // `AcademicRelation.relationType`) — só "REVIEW_SESSION" por ora (único
+  // ponto de entrada deste módulo), mas cresce sem migration se um dia
+  // existir outra origem (ex.: revisão avulsa fora de sessão).
+  origin               String
+  createdAt            DateTime    @default(now())
+
+  reviewItem      ReviewItem      @relation(fields: [reviewItemId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
+  questionAttempt QuestionAttempt @relation(fields: [questionAttemptId], references: [id])
+
+  @@index([reviewItemId])
+  @@index([userId, createdAt])
+}
+
+// Progresso de execução de uma Lesson por um usuário (Módulo 8) — o servidor
+// é o único autor de `status`/`completedAt`/`masteredAt`; nunca aceito como
+// entrada do cliente (docs/MODULO-8.md, "Anti-fraude"). Deliberadamente
+// distinto de `Progress` (que fica por Stage, LOCKED/AVAILABLE/IN_PROGRESS/
+// COMPLETED, e continua sem nenhum serviço escrevendo nele — reservado para
+// um módulo futuro de gamificação/trilha visual, ver
+// `src/modules/gamification/README.md`): granularidade de Lesson exige um
+// modelo próprio, não uma extensão do que já existe em `Progress`.
+model LessonProgress {
+  id                String               @id @default(cuid())
+  userId            String
+  lessonId          String
+  status            LessonProgressStatus @default(NOT_STARTED)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  masteredAt        DateTime?
+  lastActivityAt    DateTime             @default(now())
+  // Contadores de aproveitamento (Módulo 8, seção 17) — só sobre blocos
+  // QUESTION; recalculados a cada `submitLessonActivity`, nunca aceitos do
+  // cliente.
+  totalActivities   Int                  @default(0)
+  correctActivities Int                  @default(0)
+
+  user             User                    @relation(fields: [userId], references: [id])
+  lesson           Lesson                  @relation(fields: [lessonId], references: [id])
+  blockCompletions LessonBlockCompletion[]
+
+  @@unique([userId, lessonId])
+  @@index([lessonId])
+  @@index([userId, status])
+}
+
+// Consumo de um LessonBlock específico dentro de um LessonProgress — permite
+// "retomar de onde parou" (Módulo 8, seção 15) sem inventar uma segunda
+// estrutura de conteúdo: aponta para o MESMO `LessonBlock` do Módulo 4.
+// `questionAttemptId`, quando presente, é a prova de correção real
+// (`gradeAnswer`/`recordAttempt`, Módulo 3) de um bloco QUESTION — nunca um
+// `isCorrect` informado pelo cliente.
+model LessonBlockCompletion {
+  id                String   @id @default(cuid())
+  lessonProgressId  String
+  lessonBlockId     String
+  isCorrect         Boolean?
+  questionAttemptId String?  @unique
+  completedAt       DateTime @default(now())
+
+  lessonProgress  LessonProgress   @relation(fields: [lessonProgressId], references: [id])
+  lessonBlock     LessonBlock      @relation(fields: [lessonBlockId], references: [id])
+  questionAttempt QuestionAttempt? @relation(fields: [questionAttemptId], references: [id])
+
+  @@unique([lessonProgressId, lessonBlockId])
+  @@index([lessonBlockId])
+}
+
+// ============================================================================
+// GAMIFICAÇÃO
+// ============================================================================
+
+model Achievement {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String
+  description String
+  icon        String?
+  criteria    Json
+  xpReward    Int     @default(0)
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id])
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@id([userId, achievementId])
+  @@index([achievementId])
+}
+
+model Streak {
+  userId         String    @id
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastStudyDate  DateTime?
+  daysStudied    Int       @default(0)
+  minutesStudied Int       @default(0)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model DailyGoal {
+  userId      String   @id
+  targetXp    Int      @default(20)
+  todayXp     Int      @default(0)
+  lastResetAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Challenge {
+  id       String        @id @default(cuid())
+  type     ChallengeType
+  title    String
+  criteria Json
+  xpReward Int
+  startsAt DateTime
+  endsAt   DateTime
+}
+
+// Histórico append-only de concessões de XP (Módulo 9) — a ÚNICA fonte de
+// verdade para "quanto XP este usuário tem" (sempre SOMADO daqui, nunca
+// lido de um contador redundante — `Profile.xp`/`Profile.level`, que já
+// existiam desde o Módulo 1, ficam deliberadamente intocados por este
+// módulo para não criar uma segunda fonte de verdade, ver docs/MODULO-9.md).
+// `idempotencyKey` é o mecanismo de idempotência (seção 8 do prompt): uma
+// mesma atividade real (ex.: "LESSON_COMPLETION:<lessonProgressId>") nunca
+// gera uma segunda linha. `type` é vocabulário validado em código
+// (`GAMIFICATION_EVENT_TYPES`), não um enum do Postgres — mesmo padrão já
+// usado em `ContentAuditLog.action`/`ReviewLog.origin`, porque a lista de
+// origens de XP deve poder crescer sem migration.
+model GamificationEvent {
+  id             String   @id @default(cuid())
+  userId         String
+  type           String
+  idempotencyKey String   @unique
+  xpAwarded      Int
+  referenceType  String?
+  referenceId    String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([type])
+}
+
+// ============================================================================
+// SIMULADOS
+// ============================================================================
+
+// `isPublished Boolean` (Módulo 1) foi trocado por `status PublicationStatus`
+// no Módulo 6 (docs/MODULO-6.md, "Decisões técnicas") — um booleano não
+// consegue representar "arquivado", exigido pelo prompt deste módulo
+// ("ADMIN pode... arquivar simulados"); todo o resto do projeto já usa
+// `PublicationStatus` para exatamente essa necessidade, então esta é a
+// mesma convenção, não um mecanismo novo. `createdByUserId` (novo, opcional)
+// distingue um Simulation CURADO (nulo — publicado por CONTENT_EDITOR/ADMIN
+// para qualquer aluno) de um Simulation PERSONALIZADO (o próprio aluno que o
+// montou via `buildSimulation` — só ele pode iniciá-lo, mesmo sem estar
+// `PUBLISHED`).
+model Simulation {
+  id              String            @id @default(cuid())
+  title           String
+  config          Json
+  status          PublicationStatus @default(DRAFT)
+  createdByUserId String?
+
+  createdBy User?                @relation(fields: [createdByUserId], references: [id])
+  questions SimulationQuestion[]
+  attempts  SimulationAttempt[]
+
+  @@index([status])
+  @@index([createdByUserId])
+}
+
+model SimulationQuestion {
+  simulationId String
+  questionId   String
+  order        Int
+
+  simulation Simulation @relation(fields: [simulationId], references: [id])
+  question   Question   @relation(fields: [questionId], references: [id])
+
+  @@id([simulationId, questionId])
+  @@index([questionId])
+}
+
+model SimulationAttempt {
+  id           String    @id @default(cuid())
+  userId       String
+  simulationId String
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  score        Float?
+  correctCount Int       @default(0)
+  totalCount   Int       @default(0)
+
+  user             User              @relation(fields: [userId], references: [id])
+  simulation       Simulation        @relation(fields: [simulationId], references: [id])
+  questionAttempts QuestionAttempt[]
+
+  @@index([userId])
+  @@index([simulationId])
+}
+
+// ============================================================================
+// SAAS
+// ============================================================================
+
+model Subscription {
+  userId           String             @id
+  plan             Plan               @default(FREE)
+  status           SubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}
