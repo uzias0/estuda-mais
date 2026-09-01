@@ -5,12 +5,21 @@
  * questões, 81%), permitindo acertar sem saber o conteúdo só escolhendo a
  * mais longa. Corrigido em `scripts/fix-answer-length-bias.ts`.
  *
+ * RODADA 2 (usuário reportou de novo, testando ao vivo: "as questões que
+ * têm a resposta maior sempre são acertas, em todas as vezes") — a
+ * rodada 1 só tinha reduzido para 43,8% (7/16), limiar que este teste
+ * (então 60%) deixava passar mas que, num banco de questões ainda
+ * pequeno, o estudante sente na pele como "sempre". Depois da rodada 2 o
+ * estado real caiu para 6,3% (1/16, só o falso positivo documentado de
+ * Anna Freud) — o limiar abaixo foi apertado de 60% para 20% como
+ * consequência: ainda folgado o bastante para não disparar por ruído
+ * estatístico de amostra pequena, mas MUITO mais perto do estado real
+ * saudável, para pegar uma regressão bem antes de virar 40%+ de novo.
+ *
  * Este teste trava a REGRESSÃO: falha se, no futuro, uma nova leva de
  * questões reintroduzir esse padrão em proporção suspeita. Um pouco de
  * coincidência é esperado (com poucas alternativas, "a mais longa" acerta
- * por acaso parte do tempo) — o limiar (60%) é escolhido bem acima do
- * esperado ao acaso para só disparar num viés sistemático real, não em
- * ruído estatístico de uma amostra pequena.
+ * por acaso parte do tempo).
  */
 import { describe, it, expect } from "vitest";
 import { prisma } from "@/server/db";
@@ -41,6 +50,6 @@ describe("questões autorais não têm viés de 'resposta certa = alternativa ma
       `${longestIsCorrect}/${withOptions.length} questões (${(ratio * 100).toFixed(1)}%) têm a ` +
         "resposta certa como a alternativa mais longa — possível viés de redação explorável sem " +
         "saber o conteúdo.",
-    ).toBeLessThanOrEqual(0.6);
+    ).toBeLessThanOrEqual(0.2);
   });
 });

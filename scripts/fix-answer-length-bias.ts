@@ -1,21 +1,33 @@
 #!/usr/bin/env node
 /**
- * Correção de conteúdo: 12 questões autorais (fases de povoamento
- * acadêmico) tinham a alternativa CORRETA sistematicamente mais longa que
- * as erradas — um estudante conseguia acertar sem saber o conteúdo, só
+ * Correção de conteúdo: questões autorais (fases de povoamento acadêmico)
+ * tinham a alternativa CORRETA sistematicamente mais longa que as
+ * erradas — um estudante conseguia acertar sem saber o conteúdo, só
  * escolhendo a alternativa mais longa (achado real, reportado pelo
  * usuário testando o app instalado, confirmado por análise: 13/16
  * questões de múltipla escolha/verdadeiro-falso tinham esse padrão).
  *
  * Correção: reescreve só as alternativas ERRADAS de cada questão, para
- * ficarem com nível de detalhe/tamanho comparável à correta — nenhuma
- * alternativa muda de correta para errada ou vice-versa, nenhum fato novo
- * é inventado (as reformulações só adicionam qualificadores plausíveis
- * dentro do mesmo domínio conceitual já usado pela questão original).
- * A 13ª questão sinalizada (Anna Freud, MULTI_SELECT) é falso positivo —
- * duas alternativas empatam no tamanho máximo, uma certa e uma errada,
- * então o padrão "escolha a mais longa" não é explorável ali; não foi
- * alterada.
+ * ficarem com nível de detalhe/tamanho comparável (ou maior) que a
+ * correta — nenhuma alternativa muda de correta para errada ou
+ * vice-versa, nenhum fato novo é inventado (as reformulações só
+ * adicionam qualificadores plausíveis dentro do mesmo domínio conceitual
+ * já usado pela questão original). A 13ª questão sinalizada originalmente
+ * (Anna Freud, MULTI_SELECT) é falso positivo — duas alternativas
+ * empatam no tamanho máximo, uma certa e uma errada, então o padrão
+ * "escolha a mais longa" não é explorável ali; não foi alterada.
+ *
+ * RODADA 2 (usuário reportou de novo: "as questões que têm a resposta
+ * maior sempre são acertas, em todas as vezes") — a rodada 1 reduziu o
+ * viés de 81,3% para 43,8% (`FIXES` abaixo), mas isso ainda deixava 7 de
+ * 16 questões exploráveis; com um banco de questões pequeno (ainda em
+ * expansão), o estudante encontra essas mesmas poucas questões
+ * repetidamente e percebe o padrão. `FIXES_ROUND_2` reescreve as 6
+ * questões genuinamente exploráveis restantes (a 7ª, Anna Freud, continua
+ * sendo o mesmo falso positivo de sempre — não mexida). As mesmas
+ * reescritas também foram aplicadas nos scripts de seed
+ * (`seed-academic-content.ts`/`seed-academic-content-v2.ts`), para um
+ * reseed futuro não reintroduzir o viés original.
  *
  * Usa `updateQuestion` (Módulo 3) — nenhuma escrita direta no Prisma,
  * mesma autoridade de sempre. Idempotente: rodar de novo só reaplica o
@@ -165,11 +177,84 @@ const FIXES: Fix[] = [
   },
 ];
 
+/**
+ * RODADA 2 — ver comentário do topo do arquivo. Chaves são o texto
+ * ATUAL (já reescrito pela rodada 1), não o texto original do seed.
+ */
+const FIXES_ROUND_2: Fix[] = [
+  {
+    questionId: "cmt7hbnj0008z5kus51xu8l1o", // Bandura
+    rewrites: {
+      "Um estágio fixo do desenvolvimento cognitivo pelo qual toda criança obrigatoriamente passa":
+        "Um estágio fixo e universal do desenvolvimento cognitivo pelo qual toda criança obrigatoriamente passa, segundo Piaget",
+      "Um padrão simbólico universal herdado, presente no inconsciente coletivo de todas as culturas":
+        "Um padrão simbólico universal herdado, presente desde o nascimento no inconsciente coletivo de todas as culturas humanas",
+      "A consequência ambiental que, isoladamente, aumenta a frequência futura de um comportamento":
+        "A consequência ambiental que, isoladamente e sem nenhuma influência cognitiva, aumenta a frequência futura de um comportamento",
+    },
+  },
+  {
+    questionId: "cmt7qeicj006z2gusibmug18s", // Winnicott
+    rewrites: {
+      "Substituir de forma permanente e definitiva a necessidade de vínculo afetivo com o cuidador":
+        "Substituir de forma permanente e definitiva e sem exceções a necessidade de vínculo afetivo com o cuidador principal",
+      "Provocar, por condicionamento clássico, uma resposta emocional de medo diante de um estímulo":
+        "Provocar, por condicionamento clássico repetido, uma resposta emocional de medo diante de um estímulo neutro associado",
+      "Representar um arquétipo universal compartilhado no inconsciente coletivo da humanidade":
+        "Representar um arquétipo universal compartilhado no inconsciente coletivo de toda a espécie humana, segundo Jung",
+    },
+  },
+  {
+    questionId: "cmt7qcxr4001busus6a8bnuvc", // Wundt
+    rewrites: {
+      "Análise de sonhos e lapsos de linguagem relatados livremente pelo paciente em associação livre":
+        "Análise de sonhos e lapsos de linguagem relatados livremente pelo paciente durante a associação livre, segundo Freud",
+      "Registro exclusivo do comportamento observável, sem qualquer referência a estados de consciência":
+        "Registro exclusivo do comportamento observável, sem qualquer referência a estados internos de consciência, segundo Watson",
+      "Entrevista clínica não estruturada sobre lembranças e conflitos da infância do paciente":
+        "Entrevista clínica não estruturada sobre lembranças e conflitos da infância do paciente, conduzida sem protocolo fixo",
+    },
+  },
+  {
+    questionId: "cmt7hbn2h00125kuse378ye1y", // Freud
+    rewrites: {
+      "A parte consciente da mente responsável apenas pelo raciocínio lógico e pela razão":
+        "A parte consciente da mente responsável apenas pelo raciocínio lógico e pela razão, segundo essa mesma teoria",
+      "Um estado de sono profundo em que nenhuma atividade mental ocorre":
+        "Um estado de sono profundo e sem sonhos em que nenhuma atividade mental ocorre de forma alguma",
+      "A memória de curto prazo usada apenas em tarefas simples do dia a dia":
+        "A memória de curto prazo usada apenas em tarefas simples e repetitivas do dia a dia, sem relação com o inconsciente",
+    },
+  },
+  {
+    questionId: "cmt7qcyc30090usus7xaq5uhb", // Vygotsky
+    rewrites: {
+      "Um estágio fixo e universal do desenvolvimento cognitivo, igual para todas as culturas":
+        "Um estágio fixo e universal do desenvolvimento cognitivo, igual para todas as culturas e faixas etárias, segundo Piaget",
+      "O conjunto de reflexos inatos e automáticos já presentes no bebê desde o nascimento":
+        "O conjunto de reflexos inatos e automáticos já presentes no bebê desde o nascimento, sem nenhuma influência do meio social",
+      "A capacidade da criança de reprimir impulsos inconscientes considerados socialmente inaceitáveis":
+        "A capacidade da criança de reprimir impulsos inconscientes considerados socialmente inaceitáveis, segundo a psicanálise",
+    },
+  },
+  {
+    questionId: "cmt7hbncu005t5kusl7f5q2eg", // Piaget
+    rewrites: {
+      "Etapas sucessivas de reforço e punição descritas no condicionamento operante":
+        "Etapas sucessivas de reforço e punição descritas no condicionamento operante, segundo Skinner",
+      "Camadas sobrepostas do inconsciente coletivo compartilhadas entre culturas":
+        "Camadas sobrepostas do inconsciente coletivo compartilhadas entre culturas distintas, segundo Jung",
+      "Níveis crescentes de autoeficácia percebida ao longo da vida adulta":
+        "Níveis crescentes de autoeficácia percebida ao longo da vida adulta, segundo a teoria social cognitiva",
+    },
+  },
+];
+
 async function main() {
   const actor = await resolveSeedActor();
   let fixed = 0;
 
-  for (const fix of FIXES) {
+  for (const fix of [...FIXES, ...FIXES_ROUND_2]) {
     const question = await prisma.question.findUnique({
       where: { id: fix.questionId },
       include: { options: { orderBy: { order: "asc" } } },

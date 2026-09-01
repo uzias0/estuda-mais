@@ -540,14 +540,25 @@ const PSYCHOLOGISTS_V2: PsychologistSeedV2[] = [
           text: "Observadores treinados relatando suas sensações imediatas diante de estímulos controlados em laboratório",
           isCorrect: true,
         },
-        { text: "Análise de sonhos relatados livremente pelo paciente", isCorrect: false },
         {
-          text: "Registro do comportamento observável sem referência à consciência",
+          text: "Análise de sonhos e lapsos de linguagem relatados livremente pelo paciente durante a associação livre, segundo Freud",
           isCorrect: false,
         },
-        { text: "Entrevista clínica não estruturada sobre a infância", isCorrect: false },
+        {
+          text: "Registro exclusivo do comportamento observável, sem qualquer referência a estados internos de consciência, segundo Watson",
+          isCorrect: false,
+        },
+        {
+          text: "Entrevista clínica não estruturada sobre lembranças e conflitos da infância do paciente, conduzida sem protocolo fixo",
+          isCorrect: false,
+        },
       ],
     },
+    // Alternativas erradas reescritas para nível de detalhe/tamanho
+    // comparável (ou maior) que a correta — achado real de viés
+    // "resposta certa = mais longa" reportado pelo usuário testando o
+    // app instalado, corrigido em duas rodadas
+    // (`scripts/fix-answer-length-bias.ts`).
     lessonTitle: "Wundt e a Fundação da Psicologia Experimental",
     introContent:
       "Nesta lição você vai conhecer o momento em que a Psicologia se tornou uma ciência experimental independente, com Wilhelm Wundt e seu laboratório de 1879 em Leipzig.",
@@ -816,13 +827,24 @@ const PSYCHOLOGISTS_V2: PsychologistSeedV2[] = [
           isCorrect: true,
         },
         {
-          text: "Um estágio fixo e universal do desenvolvimento cognitivo, igual para todas as culturas",
+          text: "Um estágio fixo e universal do desenvolvimento cognitivo, igual para todas as culturas e faixas etárias, segundo Piaget",
           isCorrect: false,
         },
-        { text: "O conjunto de reflexos inatos presentes desde o nascimento", isCorrect: false },
-        { text: "A capacidade da criança de reprimir impulsos inconscientes", isCorrect: false },
+        {
+          text: "O conjunto de reflexos inatos e automáticos já presentes no bebê desde o nascimento, sem nenhuma influência do meio social",
+          isCorrect: false,
+        },
+        {
+          text: "A capacidade da criança de reprimir impulsos inconscientes considerados socialmente inaceitáveis, segundo a psicanálise",
+          isCorrect: false,
+        },
       ],
     },
+    // Alternativas erradas reescritas para nível de detalhe/tamanho
+    // comparável (ou maior) que a correta — achado real de viés
+    // "resposta certa = mais longa" reportado pelo usuário testando o
+    // app instalado, corrigido em duas rodadas
+    // (`scripts/fix-answer-length-bias.ts`).
     lessonTitle: "Vygotsky e a Zona de Desenvolvimento Proximal",
     introContent:
       "Nesta lição você vai conhecer a teoria sociocultural de Vygotsky e a ideia de que aprendemos e nos desenvolvemos, sobretudo, em interação com outras pessoas.",
@@ -1077,13 +1099,24 @@ const PSYCHOLOGISTS_V2: PsychologistSeedV2[] = [
           isCorrect: true,
         },
         {
-          text: "Substituir permanentemente a necessidade de vínculo com o cuidador",
+          text: "Substituir de forma permanente e definitiva e sem exceções a necessidade de vínculo afetivo com o cuidador principal",
           isCorrect: false,
         },
-        { text: "Provocar o condicionamento clássico de uma resposta de medo", isCorrect: false },
-        { text: "Representar um arquétipo do inconsciente coletivo", isCorrect: false },
+        {
+          text: "Provocar, por condicionamento clássico repetido, uma resposta emocional de medo diante de um estímulo neutro associado",
+          isCorrect: false,
+        },
+        {
+          text: "Representar um arquétipo universal compartilhado no inconsciente coletivo de toda a espécie humana, segundo Jung",
+          isCorrect: false,
+        },
       ],
     },
+    // Alternativas erradas reescritas para nível de detalhe/tamanho
+    // comparável (ou maior) que a correta — achado real de viés
+    // "resposta certa = mais longa" reportado pelo usuário testando o
+    // app instalado, corrigido em duas rodadas
+    // (`scripts/fix-answer-length-bias.ts`).
     lessonTitle: "Winnicott e o Objeto Transicional",
     introContent:
       "Nesta lição você vai conhecer os conceitos de Donald Winnicott sobre o desenvolvimento emocional precoce e a importância de um ambiente de cuidado 'suficientemente bom'.",

@@ -423,10 +423,21 @@ const PSYCHOLOGISTS: PsychologistSeed[] = [
         text: "Conteúdos mentais inacessíveis à consciência que ainda assim influenciam o comportamento",
         isCorrect: true,
       },
-      { text: "A parte da mente responsável apenas pelo raciocínio lógico", isCorrect: false },
-      { text: "Um estado de sono profundo sem nenhuma atividade mental", isCorrect: false },
-      { text: "A memória de curto prazo usada em tarefas do dia a dia", isCorrect: false },
+      {
+        text: "A parte consciente da mente responsável apenas pelo raciocínio lógico e pela razão, segundo essa mesma teoria",
+        isCorrect: false,
+      },
+      {
+        text: "Um estado de sono profundo e sem sonhos em que nenhuma atividade mental ocorre de forma alguma",
+        isCorrect: false,
+      },
+      {
+        text: "A memória de curto prazo usada apenas em tarefas simples e repetitivas do dia a dia, sem relação com o inconsciente",
+        isCorrect: false,
+      },
     ],
+    // Ver comentário sobre viés de comprimento de alternativa na questão
+    // de Bandura, acima — mesma correção aplicada aqui.
     questionExplanation:
       "Freud propôs que grande parte da vida psíquica ocorre fora da consciência, e que esses conteúdos inconscientes se manifestam indiretamente — por exemplo, em sonhos e sintomas.",
     lessonTitle: "Freud e o Inconsciente",
@@ -555,10 +566,21 @@ const PSYCHOLOGISTS: PsychologistSeed[] = [
         text: "Fases qualitativamente distintas de organização do pensamento ao longo da infância",
         isCorrect: true,
       },
-      { text: "Etapas de reforço e punição no condicionamento operante", isCorrect: false },
-      { text: "Camadas do inconsciente coletivo", isCorrect: false },
-      { text: "Níveis de autoeficácia percebida", isCorrect: false },
+      {
+        text: "Etapas sucessivas de reforço e punição descritas no condicionamento operante, segundo Skinner",
+        isCorrect: false,
+      },
+      {
+        text: "Camadas sobrepostas do inconsciente coletivo compartilhadas entre culturas distintas, segundo Jung",
+        isCorrect: false,
+      },
+      {
+        text: "Níveis crescentes de autoeficácia percebida ao longo da vida adulta, segundo a teoria social cognitiva",
+        isCorrect: false,
+      },
     ],
+    // Ver comentário sobre viés de comprimento de alternativa na questão
+    // de Bandura, acima — mesma correção aplicada aqui.
     questionExplanation:
       "Piaget propôs que a criança constrói o conhecimento em fases com lógicas próprias, reorganizando qualitativamente sua forma de pensar — não apenas acumulando informação.",
     lessonTitle: "Piaget e os Estágios do Desenvolvimento",
@@ -647,10 +669,26 @@ const PSYCHOLOGISTS: PsychologistSeed[] = [
         text: "A crença da pessoa em sua própria capacidade de realizar as ações necessárias para atingir um objetivo",
         isCorrect: true,
       },
-      { text: "Um estágio do desenvolvimento cognitivo infantil", isCorrect: false },
-      { text: "Um padrão simbólico do inconsciente coletivo", isCorrect: false },
-      { text: "A consequência que aumenta a frequência de um comportamento", isCorrect: false },
+      {
+        text: "Um estágio fixo e universal do desenvolvimento cognitivo pelo qual toda criança obrigatoriamente passa, segundo Piaget",
+        isCorrect: false,
+      },
+      {
+        text: "Um padrão simbólico universal herdado, presente desde o nascimento no inconsciente coletivo de todas as culturas humanas",
+        isCorrect: false,
+      },
+      {
+        text: "A consequência ambiental que, isoladamente e sem nenhuma influência cognitiva, aumenta a frequência futura de um comportamento",
+        isCorrect: false,
+      },
     ],
+    // Alternativas erradas reescritas para nível de detalhe/tamanho
+    // comparável (ou maior) que a correta — achado real de viés
+    // "resposta certa = mais longa" reportado pelo usuário testando o
+    // app instalado, corrigido em duas rodadas
+    // (`scripts/fix-answer-length-bias.ts`); texto já corrigido aqui
+    // direto na fonte do seed, para um reseed futuro não reintroduzir
+    // o viés original.
     questionExplanation:
       "Autoeficácia é uma crença sobre a própria capacidade — diferente de estágios de desenvolvimento, arquétipos ou reforço comportamental, conceitos de outras teorias.",
     lessonTitle: "Bandura e a Autoeficácia",
