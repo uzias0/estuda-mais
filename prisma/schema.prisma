@@ -329,26 +329,35 @@ model User {
   role         Role     @default(STUDENT)
   createdAt    DateTime @default(now())
 
-  profile             Profile?
-  progress            Progress[]
-  attempts            QuestionAttempt[]
-  sessions            StudySession[]
-  mastery             TopicMastery[]
-  reviewItems         ReviewItem[]
-  reviewLogs          ReviewLog[]
-  lessonProgress      LessonProgress[]
-  gamificationEvents  GamificationEvent[]
-  achievements        UserAchievement[]
-  streak              Streak?
-  dailyGoal           DailyGoal?
-  heartState          HeartState?
-  gemTransactions     GemTransaction[]
-  simAttempts         SimulationAttempt[]
-  createdSimulations  Simulation[]
-  subscription        Subscription?
-  auditLogs           ContentAuditLog[]
-  authSessions        AuthSession[]
-  passwordResetTokens PasswordResetToken[]
+  // Autenticação de dois fatores (TOTP) — `twoFactorSecret` só existe
+  // enquanto a configuração está em andamento ou já confirmada;
+  // `twoFactorEnabledAt` nulo = 2FA NÃO exigido no login, mesmo que um
+  // segredo já esteja gravado (ver comentário de `TwoFactorRecoveryCode`).
+  twoFactorSecret    String?
+  twoFactorEnabledAt DateTime?
+
+  profile                Profile?
+  progress               Progress[]
+  attempts               QuestionAttempt[]
+  sessions               StudySession[]
+  mastery                TopicMastery[]
+  reviewItems            ReviewItem[]
+  reviewLogs             ReviewLog[]
+  lessonProgress         LessonProgress[]
+  gamificationEvents     GamificationEvent[]
+  achievements           UserAchievement[]
+  streak                 Streak?
+  dailyGoal              DailyGoal?
+  heartState             HeartState?
+  gemTransactions        GemTransaction[]
+  simAttempts            SimulationAttempt[]
+  createdSimulations     Simulation[]
+  subscription           Subscription?
+  auditLogs              ContentAuditLog[]
+  authSessions           AuthSession[]
+  passwordResetTokens    PasswordResetToken[]
+  twoFactorRecoveryCodes TwoFactorRecoveryCode[]
+  twoFactorChallenges    TwoFactorChallenge[]
 
   @@index([role])
 }
@@ -386,6 +395,42 @@ model AuthSession {
 // ver `src/server/auth/email-sender.ts`; este model só guarda o token, não
 // o conteúdo do e-mail.
 model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// Autenticação de dois fatores (TOTP, RFC 6238) — pedido do usuário: "na
+// hora de criar uma conta [entrar], ter verificação de dois fatores".
+// `twoFactorSecret` fica gravado assim que o usuário INICIA a configuração
+// (seção de perfil), mas só conta como "ativado" quando `twoFactorEnabledAt`
+// não é nulo (confirmado com um código válido de verdade) — abandonar a
+// configuração no meio do caminho nunca ativa 2FA por acidente, mesmo com
+// um segredo já persistido.
+model TwoFactorRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// Token de desafio pendente entre "senha certa" e "segundo fator
+// confirmado" — mesmo padrão de `PasswordResetToken` (id é o próprio token
+// opaco, uso único, expira rápido); NUNCA vira uma `AuthSession` de verdade
+// sozinho, só depois que `completeTwoFactorSignIn` valida o código.
+model TwoFactorChallenge {
   id        String    @id @default(cuid())
   userId    String
   expiresAt DateTime

@@ -17,8 +17,10 @@ import Link from "next/link";
 import { requireSessionActor } from "@/server/auth/session";
 import { prisma } from "@/server/db";
 import { getGamificationSummary } from "@/modules/gamification/server/services/gamification-summary.service";
+import { getTwoFactorStatus } from "@/modules/auth/server/services/two-factor.service";
 import { GamificationSnapshot } from "@/components/GamificationSnapshot";
 import { CharacterMessage } from "@/components/characters/CharacterMessage";
+import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
 import { NEUTRAL_CHARACTER } from "@/config/characters";
 import { ProgressBar } from "@/components/ProgressBar";
 import { signOutAction } from "@/server/actions/auth-actions";
@@ -26,9 +28,10 @@ import { APP_VERSION } from "@/config/app-version";
 
 export default async function PerfilPage() {
   const actor = await requireSessionActor();
-  const [profile, summary] = await Promise.all([
+  const [profile, summary, twoFactorStatus] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: actor.userId } }),
     getGamificationSummary(actor, actor.userId),
+    getTwoFactorStatus(actor),
   ]);
 
   return (
@@ -75,6 +78,8 @@ export default async function PerfilPage() {
           <p style={{ marginTop: 8, fontWeight: 700 }}>Ver evolução</p>
         </Link>
       </div>
+
+      <TwoFactorSettings initialEnabled={twoFactorStatus.enabled} />
 
       <section className="card stack">
         <p className="card-title">Conta</p>

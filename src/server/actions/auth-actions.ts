@@ -12,12 +12,25 @@
  * normalmente para `error.tsx`.
  */
 import { redirect } from "next/navigation";
-import { signUp, signIn, AuthError } from "@/modules/auth/server/services/auth.service";
+import {
+  signUp,
+  signIn,
+  completeTwoFactorSignIn,
+  AuthError,
+} from "@/modules/auth/server/services/auth.service";
 import {
   requestPasswordReset,
   resetPassword,
   PasswordResetError,
 } from "@/modules/auth/server/services/password-reset.service";
+import {
+  beginTwoFactorSetup,
+  confirmTwoFactorSetup,
+  disableTwoFactor,
+  getTwoFactorStatus,
+  TwoFactorError,
+} from "@/modules/auth/server/services/two-factor.service";
+import { requireSessionActor } from "@/server/auth/session";
 import {
   setSessionCookie,
   clearSessionCookie,
@@ -52,21 +65,53 @@ export async function signUpAction(
   redirect("/dashboard");
 }
 
+export interface SignInActionResult {
+  error?: string;
+  /** Presente quando a conta tem 2FA ativado — nenhuma sessão foi criada ainda. */
+  challengeId?: string;
+}
+
 export async function signInAction(
-  _prevState: AuthActionResult,
+  _prevState: SignInActionResult,
   formData: FormData,
-): Promise<AuthActionResult> {
+): Promise<SignInActionResult> {
+  let result: Awaited<ReturnType<typeof signIn>>;
   try {
-    const result = await signIn({
+    result = await signIn({
       email: String(formData.get("email") ?? ""),
       password: String(formData.get("password") ?? ""),
     });
-    await setSessionCookie(result.sessionId, result.expiresAt);
   } catch (e) {
     if (e instanceof AuthError) return { error: e.message };
     if (e && typeof e === "object" && "issues" in e) {
       return { error: "Informe um e-mail e senha válidos." };
     }
+    throw e;
+  }
+
+  if (result.requiresTwoFactor) {
+    return { challengeId: result.challengeId };
+  }
+  await setSessionCookie(result.sessionId, result.expiresAt);
+  redirect("/dashboard");
+}
+
+export interface CompleteTwoFactorActionResult {
+  error?: string;
+}
+
+export async function completeTwoFactorSignInAction(
+  _prevState: CompleteTwoFactorActionResult,
+  formData: FormData,
+): Promise<CompleteTwoFactorActionResult> {
+  try {
+    const result = await completeTwoFactorSignIn(
+      String(formData.get("challengeId") ?? ""),
+      String(formData.get("code") ?? ""),
+    );
+    await setSessionCookie(result.sessionId, result.expiresAt);
+  } catch (e) {
+    if (e instanceof AuthError) return { error: e.message };
     throw e;
   }
   redirect("/dashboard");
@@ -77,6 +122,61 @@ export async function signOutAction(): Promise<void> {
   if (sessionId) await destroySession(sessionId);
   await clearSessionCookie();
   redirect("/login");
+}
+
+// ---- Autenticação de dois fatores (gestão — configurar/desativar) --------
+// Sempre exige sessão real (`requireSessionActor`) — nenhuma destas ações
+// aceita um `userId` do cliente, mesma regra de todo o resto do app.
+
+export interface TwoFactorSetupActionResult {
+  error?: string;
+  secret?: string;
+  otpAuthUri?: string;
+}
+
+/** Gera um novo segredo pendente — não ativa nada ainda (ver `two-factor.service.ts`). */
+export async function beginTwoFactorSetupAction(): Promise<TwoFactorSetupActionResult> {
+  const actor = await requireSessionActor();
+  const info = await beginTwoFactorSetup(actor);
+  return { secret: info.secret, otpAuthUri: info.otpAuthUri };
+}
+
+export interface ConfirmTwoFactorActionResult {
+  error?: string;
+  recoveryCodes?: string[];
+}
+
+export async function confirmTwoFactorSetupAction(
+  _prevState: ConfirmTwoFactorActionResult,
+  formData: FormData,
+): Promise<ConfirmTwoFactorActionResult> {
+  const actor = await requireSessionActor();
+  try {
+    const recoveryCodes = await confirmTwoFactorSetup(actor, String(formData.get("code") ?? ""));
+    return { recoveryCodes };
+  } catch (e) {
+    if (e instanceof TwoFactorError) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function disableTwoFactorAction(
+  _prevState: AuthActionResult,
+  formData: FormData,
+): Promise<AuthActionResult> {
+  const actor = await requireSessionActor();
+  try {
+    await disableTwoFactor(actor, String(formData.get("password") ?? ""));
+  } catch (e) {
+    if (e instanceof TwoFactorError) return { error: e.message };
+    throw e;
+  }
+  return {};
+}
+
+export async function getTwoFactorStatusAction(): Promise<{ enabled: boolean }> {
+  const actor = await requireSessionActor();
+  return getTwoFactorStatus(actor);
 }
 
 /**

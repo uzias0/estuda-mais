@@ -8,8 +8,12 @@
 import { describe, it, expect, afterAll } from "vitest";
 import { prisma } from "@/server/db";
 import { Role } from "@/generated/prisma/enums";
-import { signUp, signIn, AuthError } from "./auth.service";
+import { signUp, signIn, completeTwoFactorSignIn, AuthError } from "./auth.service";
+import { beginTwoFactorSetup, confirmTwoFactorSetup } from "./two-factor.service";
+import { generateTotpCode } from "@/server/auth/totp";
 import { __resetRateLimits } from "@/server/auth/rate-limit";
+import { createFixtureUser } from "@/test/fixtures";
+import { hashPassword } from "@/server/auth/password";
 
 describe("auth.service", () => {
   const userIds: string[] = [];
@@ -57,8 +61,9 @@ describe("auth.service", () => {
     expect(result.actor.role).toBe(Role.STUDENT);
   });
 
-  it("signIn autentica com a senha certa e cria uma nova sessão", async () => {
+  it("signIn autentica com a senha certa e cria uma nova sessão (sem 2FA ativado)", async () => {
     const result = await signIn({ email, password: "SenhaForte123!" });
+    if (result.requiresTwoFactor) throw new Error("Não deveria exigir 2FA — não está ativado.");
     sessionIds.push(result.sessionId);
     expect(result.actor.role).toBe(Role.STUDENT);
   });
@@ -73,6 +78,65 @@ describe("auth.service", () => {
     await expect(
       signIn({ email: "nao-existe-de-verdade@example.invalid", password: "QualquerSenha123!" }),
     ).rejects.toThrow("E-mail ou senha inválidos.");
+  });
+
+  it("signIn com 2FA ativado devolve um desafio pendente, SEM criar sessão — só completeTwoFactorSignIn com o código certo cria a sessão de verdade", async () => {
+    const twoFactorEmail = `test-fixture-auth-2fa-${Date.now()}@example.invalid`;
+    const signUpResult = await signUp({
+      email: twoFactorEmail,
+      password: "SenhaForte123!",
+      name: "TEST_FIXTURE 2FA",
+    });
+    userIds.push(signUpResult.actor.userId);
+    sessionIds.push(signUpResult.sessionId);
+
+    const actor = signUpResult.actor;
+    const setupInfo = await beginTwoFactorSetup(actor);
+    await confirmTwoFactorSetup(actor, generateTotpCode(setupInfo.secret));
+
+    const outcome = await signIn({ email: twoFactorEmail, password: "SenhaForte123!" });
+    if (!outcome.requiresTwoFactor) throw new Error("Deveria exigir 2FA — acabou de ser ativado.");
+    expect(outcome.challengeId).toBeTruthy();
+
+    // Nenhuma sessão nova foi criada só por acertar a senha.
+    const sessionsBeforeCode = await prisma.authSession.count({
+      where: { userId: actor.userId },
+    });
+
+    await expect(completeTwoFactorSignIn(outcome.challengeId, "000000")).rejects.toThrow(AuthError);
+
+    const validCode = generateTotpCode(setupInfo.secret);
+    const completed = await completeTwoFactorSignIn(outcome.challengeId, validCode);
+    sessionIds.push(completed.sessionId);
+    expect(completed.actor.userId).toBe(actor.userId);
+
+    const sessionsAfterCode = await prisma.authSession.count({ where: { userId: actor.userId } });
+    expect(sessionsAfterCode).toBe(sessionsBeforeCode + 1);
+
+    // O mesmo desafio não pode ser reutilizado (uso único).
+    await expect(completeTwoFactorSignIn(outcome.challengeId, validCode)).rejects.toThrow(
+      AuthError,
+    );
+  });
+
+  it("signIn com 2FA ativado também aceita um código de recuperação no lugar do TOTP", async () => {
+    const user = await createFixtureUser("auth-2fa-recovery", Role.STUDENT);
+    userIds.push(user.id);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await hashPassword("SenhaForte123!") },
+    });
+    const actor = { userId: user.id, role: Role.STUDENT };
+
+    const setupInfo = await beginTwoFactorSetup(actor);
+    const [recoveryCode] = await confirmTwoFactorSetup(actor, generateTotpCode(setupInfo.secret));
+
+    const outcome = await signIn({ email: user.email, password: "SenhaForte123!" });
+    if (!outcome.requiresTwoFactor) throw new Error("Deveria exigir 2FA.");
+
+    const completed = await completeTwoFactorSignIn(outcome.challengeId, recoveryCode);
+    sessionIds.push(completed.sessionId);
+    expect(completed.actor.userId).toBe(user.id);
   });
 
   it("signIn bloqueia após exceder o limite de tentativas para o mesmo e-mail (rate limiting)", async () => {
@@ -96,6 +160,8 @@ describe("auth.service", () => {
     if (sessionIds.length)
       await prisma.authSession.deleteMany({ where: { id: { in: sessionIds } } });
     if (userIds.length) {
+      await prisma.twoFactorChallenge.deleteMany({ where: { userId: { in: userIds } } });
+      await prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: { in: userIds } } });
       await prisma.profile.deleteMany({ where: { userId: { in: userIds } } });
       await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     }

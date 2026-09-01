@@ -702,6 +702,10 @@ export async function cleanupFixtures(ids: {
     // User sem cascade; precisa cair antes do usuário, mesmo padrão das
     // demais tabelas dependentes acima.
     await prisma.authSession.deleteMany({ where: { userId: { in: ids.userIds } } });
+    // Autenticação de dois fatores (segurança de conta) — mesma razão.
+    await prisma.twoFactorChallenge.deleteMany({ where: { userId: { in: ids.userIds } } });
+    await prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: { in: ids.userIds } } });
+    await prisma.passwordResetToken.deleteMany({ where: { userId: { in: ids.userIds } } });
     await prisma.contentAuditLog.deleteMany({ where: { actorUserId: { in: ids.userIds } } });
     await prisma.user.deleteMany({ where: { id: { in: ids.userIds } } });
   }
