@@ -17,11 +17,36 @@ const CORRECT_MESSAGES = [
   "Muito bem! 🎉",
   "Isso aí! Você mandou bem.",
   "Perfeito, continue assim!",
+  "Exatamente isso!",
+  "Mandou muito bem nessa!",
+  "Isso mesmo — você está pegando o jeito.",
+  "Na mosca! 🎯",
+  "Show de bola!",
 ];
 const INCORRECT_MESSAGES = [
   "Quase! Vamos entender essa questão.",
   "Não foi dessa vez — mas o aprendizado está no processo.",
   "Sem problemas, vamos revisar isso.",
+  "Essa foi difícil — olha a explicação com calma.",
+  "Errar faz parte de aprender. Vamos em frente!",
+  "Não desanime — releia a explicação e siga.",
+  "Foi por pouco! Vamos entender o porquê.",
+];
+
+/**
+ * Mensagens de boas-vindas ao ABRIR uma lição (pedido do usuário: "quero
+ * exercícios que o personagem tipo Freud fale com a pessoa" — a conversa
+ * começa já na abertura, não só depois de responder). Genéricas de
+ * propósito (nunca citam um conceito específico da lição) — o personagem
+ * é sempre uma mascote que incentiva, nunca uma fonte de conteúdo
+ * acadêmico (mesma regra do topo deste arquivo).
+ */
+const LESSON_START_MESSAGES = [
+  "Vamos começar? Estou aqui para te acompanhar.",
+  "Pronto para mais uma lição? Vamos nessa!",
+  "Bora estudar juntos — no seu ritmo.",
+  "Essa lição é sua. Vamos passo a passo.",
+  "Que bom te ver por aqui de novo!",
 ];
 
 /**
@@ -39,6 +64,28 @@ export function answerReaction(isCorrect: boolean): Reaction {
     ? { expression: "happy", message: pick(CORRECT_MESSAGES) }
     : { expression: "encouraging", message: pick(INCORRECT_MESSAGES) };
 }
+
+/** Saudação ao abrir uma lição — ver comentário de `LESSON_START_MESSAGES`. */
+export function lessonStartReaction(): Reaction {
+  return { expression: "encouraging", message: pick(LESSON_START_MESSAGES) };
+}
+
+/**
+ * Igual a `lessonStartReaction()`, mas SEMPRE a mesma mensagem (a primeira
+ * da lista) — usada só como valor inicial de estado em `LessonRunner`,
+ * ANTES do primeiro `useEffect` no cliente. `useState(() =>
+ * lessonStartReaction())` rodaria `Math.random()` durante o render em si
+ * (servidor E cliente, cada um sorteando um valor diferente), causando
+ * erro de hidratação (React: "server rendered text didn't match the
+ * client") — este valor fixo garante que a primeira renderização do
+ * servidor e do cliente batem sempre; a troca para uma saudação
+ * aleatória de verdade só acontece depois, num `useEffect` (client-only,
+ * não precisa bater com o servidor).
+ */
+export const LESSON_START_REACTION_FALLBACK: Reaction = {
+  expression: "encouraging",
+  message: LESSON_START_MESSAGES[0],
+};
 
 export const LESSON_COMPLETE_REACTION: Reaction = {
   expression: "celebrating",

@@ -7,11 +7,15 @@
  * Botão de saída (etapa de consolidação, seção 18): `signOutAction` real,
  * destrói a sessão no servidor e limpa o cookie — não é só navegação.
  *
- * Fase "vidas/joias": virou Server Component ASSÍNCRONO (antes era
- * estático) só para buscar baterias/joias atuais — mesmo padrão do resto
- * do app ("cada página resolve o seu Actor", Módulo 11), nenhum estado
- * novo passado por prop. Indicador só de LEITURA: perder/recarregar
- * bateria acontece em `LessonRunner`/`lesson-actions.ts`, nunca aqui.
+ * Fase "vidas/joias" + design profundo: virou Server Component ASSÍNCRONO
+ * (antes era estático) para buscar baterias/joias/streak/XP atuais — mesmo
+ * padrão do resto do app ("cada página resolve o seu Actor", Módulo 11),
+ * nenhum estado novo passado por prop. Barra unificada no topo (pedido do
+ * usuário: "quero porções de XP... quero que fique ali em cima, sua
+ * ofensiva [sequência], sua bateria" — igual ao Duolingo). Indicador só de
+ * LEITURA: perder/recarregar bateria, ganhar XP, tudo acontece em
+ * `LessonRunner`/`lesson-actions.ts`/`gamification-events.service.ts`,
+ * nunca aqui.
  */
 import Link from "next/link";
 import { Brain, Bell, LogOut } from "lucide-react";
@@ -19,13 +23,17 @@ import { signOutAction } from "@/server/actions/auth-actions";
 import { requireSessionActor } from "@/server/auth/session";
 import { getHeartsState } from "@/modules/gamification/server/services/hearts.service";
 import { getGemBalanceForActor } from "@/modules/gamification/server/services/gems.service";
+import { getStreak } from "@/modules/gamification/server/services/streak.service";
+import { getTotalXp } from "@/modules/gamification/server/services/xp.service";
 import { formatInteger } from "@/lib/format";
 
 export async function Header() {
   const actor = await requireSessionActor();
-  const [hearts, gemBalance] = await Promise.all([
+  const [hearts, gemBalance, streak, totalXp] = await Promise.all([
     getHeartsState(actor),
     getGemBalanceForActor(actor),
+    getStreak(actor),
+    getTotalXp(actor),
   ]);
 
   return (
@@ -42,7 +50,17 @@ export async function Header() {
           disabled
         />
       </div>
-      <div className="app-header-actions">
+      <div className="app-header-stats" aria-label="Seu progresso">
+        <span
+          className="badge badge-muted"
+          title={`${streak.currentStreak} dia(s) de sequência`}
+          aria-label={`${streak.currentStreak} dia(s) de sequência`}
+        >
+          🔥 {formatInteger(streak.currentStreak)}
+        </span>
+        <span className="badge badge-muted" title={`${totalXp} XP`} aria-label={`${totalXp} XP`}>
+          ⭐ {formatInteger(totalXp)}
+        </span>
         <span
           className="badge badge-muted"
           title={`${hearts.current} de ${hearts.max} baterias`}
@@ -57,6 +75,8 @@ export async function Header() {
         >
           💎 {formatInteger(gemBalance)}
         </span>
+      </div>
+      <div className="app-header-actions">
         <span className="app-header-icon-btn" aria-hidden="true">
           <Bell size={19} strokeWidth={2.25} />
         </span>

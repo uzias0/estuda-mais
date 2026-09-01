@@ -9,7 +9,7 @@
  * progresso/XP é calculado aqui (seção 16/17: "o percentual/XP deve vir do
  * servidor").
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { AttemptAnswerData } from "@/modules/assessment/types/question-attempt.schema";
 import {
@@ -28,12 +28,16 @@ import { CharacterMessage } from "./characters/CharacterMessage";
 import { CharacterCelebration } from "./characters/CharacterCelebration";
 import {
   answerReaction,
+  lessonStartReaction,
+  LESSON_START_REACTION_FALLBACK,
   LESSON_COMPLETE_REACTION,
   NEUTRAL_CHARACTER,
+  type Reaction,
 } from "./characters/reactions";
 import { blockTypeLabel, formatPercentage } from "@/lib/format";
 import { now } from "@/lib/time";
 import type { CharacterDef } from "@/config/characters";
+import { XP_REWARDS } from "@/config/gamification";
 
 export interface LessonBlockData {
   id: string;
@@ -96,6 +100,21 @@ export function LessonRunner({
   const [gemBalance, setGemBalance] = useState(initialGemBalance);
   const [refillError, setRefillError] = useState<string | null>(null);
   const [refilling, setRefilling] = useState(false);
+  // Valor inicial FIXO (nunca `Math.random()` durante o render — causaria
+  // erro de hidratação, servidor e cliente sorteando mensagens diferentes
+  // na mesma renderização inicial; ver comentário completo em
+  // `LESSON_START_REACTION_FALLBACK`). A troca para uma saudação de
+  // verdade aleatória só acontece DEPOIS de montado (`useEffect` abaixo,
+  // só no cliente) — e só uma vez por montagem, não a cada re-render.
+  const [greeting, setGreeting] = useState<Reaction>(LESSON_START_REACTION_FALLBACK);
+  useEffect(() => {
+    // Exceção deliberada à regra (setState direto em efeito, de resto
+    // desencorajado): é exatamente o padrão recomendado para "sortear um
+    // valor só depois de montado no cliente" sem erro de hidratação — uma
+    // única atualização pontual na montagem, não um loop nem algo caro.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGreeting(lessonStartReaction());
+  }, []);
 
   const currentBlock = session.currentBlock
     ? blocks.find((b) => b.id === session.currentBlock!.id)
@@ -221,19 +240,26 @@ export function LessonRunner({
 
   if (phase === "not-started") {
     return (
-      <div className="card" style={{ textAlign: "center" }}>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 800 }}>{lessonTitle}</h1>
-        <p style={{ color: "var(--color-text-muted)", marginTop: 8 }}>
-          {blocks.length} bloco(s) de conteúdo.
-        </p>
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{ marginTop: 16 }}
-          onClick={handleStart}
-        >
-          Começar lição
-        </button>
+      <div className="stack">
+        <CharacterMessage
+          character={character}
+          expression={greeting.expression}
+          message={greeting.message}
+        />
+        <div className="card" style={{ textAlign: "center" }}>
+          <h1 style={{ fontSize: "1.4rem", fontWeight: 800 }}>{lessonTitle}</h1>
+          <p style={{ color: "var(--color-text-muted)", marginTop: 8 }}>
+            {blocks.length} bloco(s) de conteúdo.
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ marginTop: 16 }}
+            onClick={handleStart}
+          >
+            Começar lição
+          </button>
+        </div>
       </div>
     );
   }
@@ -356,6 +382,26 @@ export function LessonRunner({
               />
             );
           })()}
+          {feedback.isCorrect ? (
+            // "Porção de XP" (pedido do usuário) por questão certa — mesmo
+            // valor que `processLessonCompletionEvent` de fato credita ao
+            // concluir a lição (`XP_REWARDS.LESSON_QUESTION_CORRECT`,
+            // reaproveitado, não um número solto novo); só uma prévia
+            // visual imediata, o crédito real continua batendo na
+            // conclusão (Módulo 9), como já era.
+            <p
+              key={`${currentBlock.id}-xp-pop`}
+              className="xp-gain-pop"
+              style={{
+                fontSize: "1rem",
+                fontWeight: 800,
+                color: "var(--color-xp)",
+                textAlign: "center",
+              }}
+            >
+              +{XP_REWARDS.LESSON_QUESTION_CORRECT} XP
+            </p>
+          ) : null}
           <QuestionFeedback isCorrect={feedback.isCorrect} explanation={feedback.explanation} />
           <button type="button" className="btn btn-primary" onClick={handleContinueAfterFeedback}>
             Continuar

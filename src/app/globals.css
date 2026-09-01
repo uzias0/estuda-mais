@@ -74,6 +74,13 @@
   --gradient-brand: linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-strong) 100%);
   --shadow-float: 0 6px 20px rgba(91, 91, 240, 0.22);
   --shadow-pop: 0 16px 40px rgba(20, 22, 35, 0.14);
+
+  /* "Estrada" do caminho de aprendizagem (fase de design profundo — pedido
+   * do usuário: "eu quero uma estrada ali, tudo bonitinho") — cores
+   * dedicadas, mais visíveis que `--color-border`/`--color-surface-muted`
+   * (que já servem outro propósito, bordas/fundos discretos). */
+  --color-path: #d8d3e8;
+  --color-path-edge: #b7b0d4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,6 +101,8 @@
     --color-danger-bg: #3a1414;
     --color-warning: #ffb85c;
     --color-warning-bg: #3a2a0c;
+    --color-path: #3f4258;
+    --color-path-edge: #565a78;
   }
 }
 
@@ -375,6 +384,29 @@ p {
   z-index: 20;
 }
 
+/* Em telas estreitas, a barra de status (streak/XP/bateria/joia) é a
+ * informação mais importante do cabeçalho (pedido do usuário) — abre
+ * espaço para ela reduzindo o padding do cabeçalho, escondendo o texto da
+ * marca (o ícone sozinho já identifica o app) e o sino de notificações
+ * (ainda decorativo, sem função real — Módulo 11). Nada funcional some,
+ * só texto/ícone redundante ou inerte. */
+@media (max-width: 480px) {
+  .app-header {
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+  }
+  .app-header-brand span {
+    display: none;
+  }
+  .app-header-icon-btn[aria-hidden="true"] {
+    display: none;
+  }
+  .app-header-stats .badge {
+    padding: 4px 7px;
+    font-size: 0.7rem;
+  }
+}
+
 .app-header-brand {
   display: flex;
   align-items: center;
@@ -408,10 +440,36 @@ p {
   min-height: 40px;
 }
 
+/* Barra de status unificada (fase de design profundo — pedido do usuário:
+ * "quero porções de XP... quero que fique ali em cima, sua sequência, sua
+ * bateria" — igual ao Duolingo). `overflow-x: auto` + `scrollbar-width:
+ * none` (e o pseudo-elemento webkit abaixo) deixam os 4 selos deslizarem
+ * horizontalmente em telas estreitas em vez de quebrar linha ou estourar o
+ * cabeçalho — sem esconder nenhum dado. */
+.app-header-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-width: 0;
+}
+
+.app-header-stats::-webkit-scrollbar {
+  display: none;
+}
+
+.app-header-stats .badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .app-header-actions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex-shrink: 0;
 }
 
 .app-header-icon-btn {
@@ -807,19 +865,22 @@ p {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
   padding: var(--space-4) 0;
 }
 
-.lesson-path::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--color-border);
-  transform: translateX(-50%);
+/* Estrada entre nós consecutivos (pedido do usuário: "eu quero uma
+ * estrada ali, tudo bonitinho" — igual ao Duolingo/Angry Birds) — SUBSTITUI
+ * a linha reta única de antes (`::before`) por um trecho curvo POR PAR de
+ * nós, gerado por `buildConnectorPathD` (`LearningPath.tsx`). `height` fixo
+ * porque o SVG usa `preserveAspectRatio="none"` — a curva sempre se estica
+ * para caber, então o valor aqui é só "quanto de estrada" aparece entre um
+ * nó e o próximo, não precisa bater com nenhuma medida do DOM. */
+.lesson-path-connector {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin: -14px 0; /* a estrada passa POR BAIXO da borda dos círculos vizinhos, não some atrás deles. */
+  position: relative;
   z-index: 0;
 }
 
@@ -835,6 +896,7 @@ p {
   border-radius: var(--radius-pill);
   position: relative;
   z-index: 1;
+  margin: var(--space-4) 0;
 }
 
 .lesson-node-row {
@@ -843,6 +905,7 @@ p {
   gap: var(--space-2);
   position: relative;
   z-index: 1;
+  margin: var(--space-2) 0;
 }
 
 /* Personagem "apontando" para a lição atual (fase de redesign profundo,

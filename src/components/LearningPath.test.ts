@@ -5,7 +5,13 @@
  * caminho visual não perde nem inventa nenhum dado de negócio.
  */
 import { describe, it, expect } from "vitest";
-import { buildPathItems, NODE_POSITIONS, type LearningPathData } from "./LearningPath";
+import {
+  buildPathItems,
+  buildConnectorPathD,
+  POSITION_X,
+  NODE_POSITIONS,
+  type LearningPathData,
+} from "./LearningPath";
 
 function fixtureData(lessonIds: string[]): LearningPathData {
   return {
@@ -99,5 +105,29 @@ describe("LearningPath — buildPathItems", () => {
     ]);
     const lessons = buildPathItems(data, status).filter((i) => i.kind === "lesson");
     expect(lessons.every((l) => !l.isCurrent)).toBe(true);
+  });
+});
+
+describe("LearningPath — buildConnectorPathD (estrada entre nós)", () => {
+  it("começa no X do nó de origem e termina no X do nó de destino", () => {
+    const d = buildConnectorPathD("left", "right");
+    expect(d).toContain(`M ${POSITION_X.left} 0`);
+    expect(d).toMatch(new RegExp(`${POSITION_X.right} 100$`));
+  });
+
+  it("nós na mesma posição geram uma curva reta (mesmo X do início ao fim)", () => {
+    const d = buildConnectorPathD("center", "center");
+    expect(d).toBe(
+      `M ${POSITION_X.center} 0 C ${POSITION_X.center} 34, ${POSITION_X.center} 66, ${POSITION_X.center} 100`,
+    );
+  });
+
+  it("cada uma das 3 posições tem um X percentual distinto (nunca dois iguais)", () => {
+    const values = Object.values(POSITION_X);
+    expect(new Set(values).size).toBe(values.length);
+    values.forEach((v) => {
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(100);
+    });
   });
 });

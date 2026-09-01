@@ -13,6 +13,7 @@
  * deixa o posicionamento esquerda/centro/direita testável isoladamente,
  * sem precisar renderizar nada (`LearningPath.test.ts`).
  */
+import { Fragment } from "react";
 import Link from "next/link";
 import { Play, Lock, Check, Star, Compass } from "lucide-react";
 import { CharacterAvatar } from "./characters/CharacterAvatar";
@@ -36,6 +37,32 @@ const STATUS_MODIFIER: Record<LessonAvailabilityStatus, string> = {
 
 export const NODE_POSITIONS = ["center", "left", "right"] as const;
 export type NodePosition = (typeof NODE_POSITIONS)[number];
+
+/**
+ * "Estrada" entre nós consecutivos (pedido do usuário: "eu quero uma
+ * estrada ali, tudo bonitinho" — igual ao Duolingo/Angry Birds, não uma
+ * invenção exclusiva de nenhum dos dois). Cada posição vira uma coordenada
+ * X percentual (mesmos 12%/50%/88% já usados por
+ * `.lesson-node-row--left/center/right` em `globals.css` — a estrada
+ * PASSA pelo centro exato de cada nó, nunca um valor solto novo).
+ */
+export const POSITION_X: Record<NodePosition, number> = { left: 12, center: 50, right: 88 };
+
+/**
+ * Curva suave (Bézier cúbica) de um nó ao próximo — função PURA, testável
+ * sem renderizar nada (`LearningPath.test.ts`). `viewBox` é sempre
+ * "0 0 100 100" com `preserveAspectRatio="none"`, então a curva se estica
+ * para caber na altura real do espaço entre as duas linhas (definida em
+ * CSS, `.lesson-path-connector`) sem precisar medir o DOM em JavaScript.
+ */
+export function buildConnectorPathD(fromPosition: NodePosition, toPosition: NodePosition): string {
+  const x1 = POSITION_X[fromPosition];
+  const x2 = POSITION_X[toPosition];
+  // Pontos de controle a 1/3 e 2/3 da altura — dá a "serpenteada" de
+  // estrada mesmo quando os dois nós estão na mesma posição (reta) ou em
+  // posições opostas (curva em S).
+  return `M ${x1} 0 C ${x1} 34, ${x2} 66, ${x2} 100`;
+}
 
 export interface LearningPathData {
   areas: Array<{
@@ -117,6 +144,39 @@ export function buildPathItems(
   return items;
 }
 
+/**
+ * Função PURA (não um laço dentro do render): para cada item de `items`,
+ * devolve a posição do nó ANTERIOR de onde a estrada deveria vir, ou `null`
+ * quando não há estrada antes dele (logo após um rótulo de ÁREA, ou o
+ * primeiro nó de todos). Calculado ANTES do JSX, não dentro do `.map()` de
+ * renderização — mutar uma variável capturada por um callback executado
+ * durante o render é um padrão que a regra `react-hooks/immutability`
+ * proíbe (o render precisa continuar determinístico mesmo que o React
+ * decida pular/reordenar chamadas do callback no futuro).
+ */
+function computeConnectorOrigins(items: PathItem[]): Array<NodePosition | null> {
+  const origins: Array<NodePosition | null> = [];
+  let previousPosition: NodePosition | null = null;
+  for (const item of items) {
+    if (item.kind === "area-label") {
+      previousPosition = null;
+      origins.push(null);
+      continue;
+    }
+    if (item.kind === "group-label") {
+      // Ao contrário do rótulo de ÁREA (acima), o de grupo (unidade·etapa)
+      // não interrompe a estrada — nesta base, a maioria das etapas tem só
+      // 1 lição cada, então resetar aqui faria a estrada nunca aparecer
+      // (sempre "reiniciando" antes de cada lição única).
+      origins.push(null);
+      continue;
+    }
+    origins.push(previousPosition);
+    previousPosition = item.position;
+  }
+  return origins;
+}
+
 export function LearningPath({
   data,
   statusByLessonId,
@@ -129,10 +189,11 @@ export function LearningPath({
   currentCharacter?: CharacterDef;
 }) {
   const items = buildPathItems(data, statusByLessonId);
+  const connectorOrigins = computeConnectorOrigins(items);
 
   return (
     <div className="lesson-path">
-      {items.map((item) => {
+      {items.map((item, index) => {
         if (item.kind === "area-label") {
           return (
             <p key={item.key} className="lesson-path-group-label">
@@ -151,19 +212,53 @@ export function LearningPath({
             </p>
           );
         }
+        const connectorOrigin = connectorOrigins[index];
+        const connector = connectorOrigin ? (
+          <PathConnector from={connectorOrigin} to={item.position} />
+        ) : null;
         return (
-          <LessonNode
-            key={item.key}
-            lessonId={item.lessonId}
-            title={item.title}
-            status={item.status}
-            position={item.position}
-            isCurrent={item.isCurrent}
-            character={item.isCurrent ? currentCharacter : undefined}
-          />
+          <Fragment key={item.key}>
+            {connector}
+            <LessonNode
+              lessonId={item.lessonId}
+              title={item.title}
+              status={item.status}
+              position={item.position}
+              isCurrent={item.isCurrent}
+              character={item.isCurrent ? currentCharacter : undefined}
+            />
+          </Fragment>
         );
       })}
     </div>
+  );
+}
+
+/** Trecho de estrada entre dois nós consecutivos — só decorativo (`aria-hidden`), a ordem real de navegação vem só dos links dos nós. */
+function PathConnector({ from, to }: { from: NodePosition; to: NodePosition }) {
+  return (
+    <svg
+      className="lesson-path-connector"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        d={buildConnectorPathD(from, to)}
+        fill="none"
+        stroke="var(--color-path)"
+        strokeWidth="12"
+        strokeLinecap="round"
+      />
+      <path
+        d={buildConnectorPathD(from, to)}
+        fill="none"
+        stroke="var(--color-path-edge)"
+        strokeWidth="4"
+        strokeDasharray="1 11"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
