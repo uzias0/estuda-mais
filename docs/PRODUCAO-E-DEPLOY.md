@@ -106,7 +106,12 @@ Postgres persistente com o mínimo de configuração; **Vercel** também roda
 o Next.js perfeitamente, mas exige um Postgres gerenciado externo, já que
 não hospeda banco de dados):
 
-1. `npm ci`
+1. `npm ci --include=dev` (**`--include=dev` é obrigatório** — a maioria dos
+   hosts define `NODE_ENV=production` já no build, o que faz `npm ci`
+   pular devDependencies por padrão; `next build` typecheca o projeto
+   inteiro, inclusive `*.test.ts`, que importam `vitest` — sem essa flag o
+   build falha com `Cannot find module 'vitest'`, erro real já visto e
+   corrigido nesta sessão)
 2. `npx prisma migrate deploy` (nunca `migrate dev`/`reset` em produção)
 3. `npm run build`
 4. `npm run start` (ou o comando equivalente do host)
@@ -498,7 +503,7 @@ não houver conta de hospedagem).
 **F. Deploy**
 
 ```bash
-npm ci
+npm ci --include=dev
 npx prisma migrate deploy
 npm run build
 npm run start
@@ -583,7 +588,7 @@ passo completo e os comandos reais.
 3. **Banco**: adicione um serviço PostgreSQL gerenciado no mesmo provedor (seção 6.4).
 4. **Variáveis de ambiente**: `DATABASE_URL`, `APP_BASE_URL` no painel do provedor (seção 1).
 5. **Migrations**: `npx prisma migrate deploy` (seção 5/15-F).
-6. **Deploy**: `npm ci && npm run build && npm run start` (ou o botão de deploy do provedor) (seção 5/15-F).
+6. **Deploy**: `npm ci --include=dev && npm run build && npm run start` (ou o botão de deploy do provedor) (seção 5/15-F).
 7. **Health check**: abra `<APP_BASE_URL>/api/health` → espere `{"status":"ok","database":"ok"}` (seção 10).
 8. **Teste web**: cadastro → login → dashboard pelo navegador, na URL pública.
 9. **Capacitor**: `export CAPACITOR_SERVER_URL="https://SUA-URL"` (nunca localhost/IP privado) (seção 6.3).
