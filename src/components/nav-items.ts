@@ -22,6 +22,8 @@ import {
   BarChart3,
   Trophy,
   User,
+  Target,
+  Crown,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,6 +45,12 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/progresso", label: "Progresso", icon: BarChart3 },
   { href: "/dashboard/conquistas", label: "Conquistas", icon: Trophy },
   { href: "/dashboard/perfil", label: "Perfil", icon: User },
+  // Adicionados na fase "missões/ranking" (pedido do usuário) — no FIM da
+  // lista, de propósito: `BOTTOM_NAV_ITEMS` abaixo referencia os itens
+  // anteriores por índice fixo, então inserir no meio quebraria essas
+  // referências.
+  { href: "/dashboard/missoes", label: "Missões", icon: Target },
+  { href: "/dashboard/ranking", label: "Ranking", icon: Crown },
 ];
 
 /**

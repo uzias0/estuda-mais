@@ -31,6 +31,7 @@ import { creditGems } from "./gems.service";
 import { recordStudyActivity } from "./streak.service";
 import { applyXpToDailyGoal } from "./daily-goal.service";
 import { evaluateAndUnlockAchievements } from "./achievement.service";
+import { evaluateAndRewardWeeklyMissions } from "./weekly-missions.service";
 
 function assertOwnEventOrAdmin(actor: Actor, ownerUserId: string): void {
   if (actor.userId === ownerUserId) return;
@@ -52,6 +53,12 @@ function assertOwnEventOrAdmin(actor: Actor, ownerUserId: string): void {
  * chamar esta função de novo nunca duplica a joia de conquista.
  * `gemsGrantedNow` de entrada é só o que a origem do evento (ex.: lição)
  * já concedeu antes de chegar aqui; a soma final inclui as conquistas.
+ *
+ * Fase "missões semanais": reavalia as missões ativas desta semana em
+ * paralelo com conquistas — mesma idempotência por `weekKey:missionId`
+ * (`weekly-missions.service.ts`), então completar a lição que cumpre uma
+ * missão já credita XP/joia na hora, sem o aluno precisar abrir a tela de
+ * missões.
  */
 async function finalizeGamificationProcessing(
   userId: string,
@@ -60,12 +67,14 @@ async function finalizeGamificationProcessing(
   now: Date = new Date(),
 ) {
   const streak = await recordStudyActivity(userId, now);
-  const [dailyGoal, unlockedAchievements] = await Promise.all([
+  const [dailyGoal, unlockedAchievements, weeklyMissions] = await Promise.all([
     applyXpToDailyGoal(userId, xpGrantedNow, now),
     evaluateAndUnlockAchievements(userId),
+    evaluateAndRewardWeeklyMissions(userId, now),
   ]);
 
-  let totalGemsGrantedNow = gemsGrantedNow;
+  const totalXpGrantedNow = xpGrantedNow + weeklyMissions.xpGrantedNow;
+  let totalGemsGrantedNow = gemsGrantedNow + weeklyMissions.gemsGrantedNow;
   for (const outcome of unlockedAchievements) {
     if (!outcome.justUnlocked) continue;
     const gemAward = await creditGems({
@@ -81,11 +90,12 @@ async function finalizeGamificationProcessing(
   }
 
   return {
-    xpGrantedNow,
+    xpGrantedNow: totalXpGrantedNow,
     gemsGrantedNow: totalGemsGrantedNow,
     streak,
     dailyGoal,
     unlockedAchievements,
+    weeklyMissions,
   };
 }
 

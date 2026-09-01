@@ -18,6 +18,8 @@ export const GAMIFICATION_EVENT_TYPES = {
   DIAGNOSTIC_COMPLETED: "DIAGNOSTIC_COMPLETED",
   DAILY_GOAL_COMPLETED: "DAILY_GOAL_COMPLETED",
   ACHIEVEMENT_UNLOCKED: "ACHIEVEMENT_UNLOCKED",
+  // Fase "missões semanais" — ver src/config/missions.ts.
+  WEEKLY_MISSION_COMPLETED: "WEEKLY_MISSION_COMPLETED",
 } as const;
 export type GamificationEventType =
   (typeof GAMIFICATION_EVENT_TYPES)[keyof typeof GAMIFICATION_EVENT_TYPES];
@@ -26,9 +28,14 @@ export type GamificationEventType =
  * Política de XP (Módulo 9, seção 5) — valores literais do "exemplo inicial
  * de política" do prompt do módulo. Ajustável aqui, sem tocar em nenhum
  * serviço. XP de conquista NÃO está aqui: vem de `Achievement.xpReward`
- * (schema, Módulo 1), que já é o dono desse valor.
+ * (schema, Módulo 1), que já é o dono desse valor — mesmo motivo de
+ * `WEEKLY_MISSION_COMPLETED` também ficar de fora: o valor vem de
+ * `MissionTemplate.xpReward` (`src/config/missions.ts`), que é dono dele.
  */
-export const XP_REWARDS: Record<Exclude<GamificationEventType, "ACHIEVEMENT_UNLOCKED">, number> = {
+export const XP_REWARDS: Record<
+  Exclude<GamificationEventType, "ACHIEVEMENT_UNLOCKED" | "WEEKLY_MISSION_COMPLETED">,
+  number
+> = {
   LESSON_COMPLETED: 50,
   LESSON_QUESTION_CORRECT: 10,
   REVIEW_SESSION_COMPLETED: 20,

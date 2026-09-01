@@ -33,6 +33,10 @@ export const GEM_EVENT_TYPES = {
   LESSON_COMPLETED: "LESSON_COMPLETED",
   ACHIEVEMENT_UNLOCKED: "ACHIEVEMENT_UNLOCKED",
   HEART_REFILL: "HEART_REFILL",
+  // Fase "missões semanais" — ver src/config/missions.ts. Recompensa vem
+  // de `MissionTemplate.gemReward`, não de `GEM_REWARDS` (mesmo motivo de
+  // ACHIEVEMENT_UNLOCKED ficar fora de `GEM_REWARDS`, abaixo).
+  WEEKLY_MISSION_COMPLETED: "WEEKLY_MISSION_COMPLETED",
 } as const;
 export type GemEventType = (typeof GEM_EVENT_TYPES)[keyof typeof GEM_EVENT_TYPES];
 
