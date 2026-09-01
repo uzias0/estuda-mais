@@ -11,17 +11,22 @@ import { getStreak } from "./streak.service";
 import { getDailyGoalStatus } from "./daily-goal.service";
 import { listAchievementsForUser } from "./achievement.service";
 import { getStudentProgress } from "./student-progress.service";
+import { getHeartsState } from "./hearts.service";
+import { getGemBalanceForActor } from "./gems.service";
 
 export async function getGamificationSummary(actor: Actor, targetUserId: string = actor.userId) {
   assertOwnGamificationDataOrAdmin(actor, targetUserId);
 
-  const [totalXp, streak, dailyGoal, achievements, academicProgress] = await Promise.all([
-    getTotalXp(actor, targetUserId),
-    getStreak(actor, targetUserId),
-    getDailyGoalStatus(actor, targetUserId),
-    listAchievementsForUser(actor, targetUserId),
-    getStudentProgress(actor, targetUserId),
-  ]);
+  const [totalXp, streak, dailyGoal, achievements, academicProgress, hearts, gemBalance] =
+    await Promise.all([
+      getTotalXp(actor, targetUserId),
+      getStreak(actor, targetUserId),
+      getDailyGoalStatus(actor, targetUserId),
+      listAchievementsForUser(actor, targetUserId),
+      getStudentProgress(actor, targetUserId),
+      getHeartsState(actor, targetUserId),
+      getGemBalanceForActor(actor, targetUserId),
+    ]);
 
   return {
     xp: getXpProgressToNextLevel(totalXp),
@@ -36,5 +41,7 @@ export async function getGamificationSummary(actor: Actor, targetUserId: string 
       upcoming: achievements.upcoming.slice(0, 5),
     },
     academicProgress,
+    hearts,
+    gemBalance,
   };
 }

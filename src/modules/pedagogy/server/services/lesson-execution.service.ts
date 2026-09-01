@@ -183,6 +183,13 @@ export async function submitLessonActivity(actor: Actor, input: SubmitLessonActi
     },
   });
 
+  // Fase "vidas/joias": distingue "concluído agora" de "reenvio de bloco já
+  // concluído" — só a PRIMEIRA vez que um bloco é respondido de verdade
+  // deve poder consumir bateria (ver `lesson-actions.ts`). Nunca fica
+  // ambíguo: `@@unique([lessonProgressId, lessonBlockId])` acima garante
+  // que este bloco só passa por aqui como "novo" uma única vez na vida.
+  const isNewCompletion = !existingCompletion;
+
   let isCorrect: boolean | null = existingCompletion?.isCorrect ?? null;
   let questionAttemptId: string | undefined = existingCompletion?.questionAttemptId ?? undefined;
   let explanation: string | null = null;
@@ -233,6 +240,7 @@ export async function submitLessonActivity(actor: Actor, input: SubmitLessonActi
     block: { id: block.id, type: block.type },
     isCorrect,
     explanation,
+    isNewCompletion,
   };
 }
 

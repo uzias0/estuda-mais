@@ -60,6 +60,23 @@ export function GamificationSnapshot({ summary }: { summary: GamificationSummary
           {formatPercentage(summary.academicProgress.lessons.accuracyPercentage)} de acerto
         </p>
       </div>
+
+      <div className="card card--tight">
+        <p className="card-title">❤️ Baterias · 💎 Joias</p>
+        <p style={{ fontSize: "1.8rem", fontWeight: 800, marginTop: 8 }}>
+          {formatInteger(summary.hearts.current)}
+          <span style={{ fontSize: "1rem", color: "var(--color-text-muted)" }}>
+            {" "}
+            / {formatInteger(summary.hearts.max)}
+          </span>
+        </p>
+        <p style={{ color: "var(--color-text-muted)", fontSize: "0.85rem", marginTop: 4 }}>
+          {formatInteger(summary.gemBalance)} joia(s)
+          {summary.hearts.current < summary.hearts.max && summary.hearts.nextRegenAt
+            ? " · recarregando aos poucos"
+            : ""}
+        </p>
+      </div>
     </div>
   );
 }

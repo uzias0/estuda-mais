@@ -53,6 +53,20 @@ describe("Lesson Server Actions", () => {
     await loginAsUserId(actor.userId); // Server Action agora exige sessão real (etapa de consolidação)
     const before = await getTotalXp(actor, actor.userId);
 
+    // O ator de desenvolvimento é fixo/persistido entre execuções de teste
+    // (nunca limpo por `cleanupFixtures`) — diferente de XP (sem teto),
+    // bateria TEM teto em 0 (fase "vidas/joias"). Sem este reset, uma
+    // resposta errada de verdade (proposital, abaixo) eventualmente
+    // zeraria as baterias reais deste ator entre execuções repetidas do
+    // teste, bloqueando `submitLessonActivityAction` para sempre depois
+    // disso — reset explícito garante o teste determinístico
+    // independentemente do histórico.
+    await prisma.heartState.upsert({
+      where: { userId: actor.userId },
+      create: { userId: actor.userId },
+      update: { current: 25, lastChangedAt: new Date() },
+    });
+
     await startLessonAction(lesson.id);
 
     // resposta ERRADA, mas o payload da Action não tem NENHUM campo para
@@ -63,7 +77,10 @@ describe("Lesson Server Actions", () => {
       answerData: { type: "MULTIPLE_CHOICE", selectedOptionId: wrongOptionId },
       timeSpentMs: 100,
     });
+    if (submitted.blocked)
+      throw new Error("Não deveria estar bloqueado — bateria acabou de ser resetada.");
     expect(submitted.isCorrect).toBe(false); // corrigido de verdade, mesmo sem "forjar" nada.
+    expect(submitted.hearts.current).toBe(24); // perdeu 1 bateria pela resposta errada nova.
 
     const completion = await completeLessonAction(lesson.id);
     expect(completion.completed.status).toBe("COMPLETED"); // não MASTERED — aproveitamento 0%.

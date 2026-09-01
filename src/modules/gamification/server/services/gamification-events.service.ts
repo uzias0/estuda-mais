@@ -12,14 +12,22 @@
  * `finishSimulation`, `finishDiagnostic`) por quem orquestra o fluxo —
  * mesmo estágio do projeto em que nenhum módulo anterior tem camada HTTP
  * própria ainda (decisão registrada em docs/MODULO-9.md).
+ *
+ * Fase "vidas/joias" (docs/FASE-VIDAS-JOIAS.md): além de XP, este arquivo
+ * agora também é o único ponto que concede JOIA por conclusão de lição e
+ * por conquista desbloqueada — perda de bateria (o lado "gasto" da mesma
+ * fase) NÃO mora aqui, pois precisa acontecer em tempo real por resposta
+ * errada (não só na conclusão da lição); veja `lesson-actions.ts`.
  */
 import { prisma } from "@/server/db";
 import { Actor, AuthorizationError } from "@/server/auth/authorize";
 import { AttemptContext, LessonProgressStatus, Role, StudyMode } from "@/generated/prisma/enums";
 import { NotFoundError } from "@/modules/curation/server/services/publicationPolicy";
 import { GAMIFICATION_EVENT_TYPES, XP_REWARDS } from "@/config/gamification";
+import { GEM_EVENT_TYPES, GEM_REWARDS } from "@/config/hearts";
 import { GamificationValidationError } from "./errors";
 import { awardXp } from "./xp.service";
+import { creditGems } from "./gems.service";
 import { recordStudyActivity } from "./streak.service";
 import { applyXpToDailyGoal } from "./daily-goal.service";
 import { evaluateAndUnlockAchievements } from "./achievement.service";
@@ -37,10 +45,18 @@ function assertOwnEventOrAdmin(actor: Actor, ownerUserId: string): void {
  * e reavalia conquistas. `recordStudyActivity` roda antes das outras duas
  * (sequencial, não em paralelo) para que uma conquista de streak
  * (`STREAK_DAYS`) veja o streak já atualizado nesta mesma chamada.
+ *
+ * Fase "vidas/joias": toda conquista desbloqueada AGORA (`justUnlocked`)
+ * também concede joia, além do XP que `achievement.service.ts` já concede
+ * sozinho — mesma âncora de idempotência (`userId`+`achievementId`), então
+ * chamar esta função de novo nunca duplica a joia de conquista.
+ * `gemsGrantedNow` de entrada é só o que a origem do evento (ex.: lição)
+ * já concedeu antes de chegar aqui; a soma final inclui as conquistas.
  */
 async function finalizeGamificationProcessing(
   userId: string,
   xpGrantedNow: number,
+  gemsGrantedNow: number = 0,
   now: Date = new Date(),
 ) {
   const streak = await recordStudyActivity(userId, now);
@@ -48,7 +64,29 @@ async function finalizeGamificationProcessing(
     applyXpToDailyGoal(userId, xpGrantedNow, now),
     evaluateAndUnlockAchievements(userId),
   ]);
-  return { xpGrantedNow, streak, dailyGoal, unlockedAchievements };
+
+  let totalGemsGrantedNow = gemsGrantedNow;
+  for (const outcome of unlockedAchievements) {
+    if (!outcome.justUnlocked) continue;
+    const gemAward = await creditGems({
+      userId,
+      type: GEM_EVENT_TYPES.ACHIEVEMENT_UNLOCKED,
+      idempotencyKey: `${GEM_EVENT_TYPES.ACHIEVEMENT_UNLOCKED}:${userId}:${outcome.achievement.id}`,
+      amount: GEM_REWARDS.ACHIEVEMENT_UNLOCKED,
+      referenceType: "Achievement",
+      referenceId: outcome.achievement.id,
+      metadata: { code: outcome.achievement.code, name: outcome.achievement.name },
+    });
+    if (!gemAward.alreadyProcessed) totalGemsGrantedNow += gemAward.transaction.amount;
+  }
+
+  return {
+    xpGrantedNow,
+    gemsGrantedNow: totalGemsGrantedNow,
+    streak,
+    dailyGoal,
+    unlockedAchievements,
+  };
 }
 
 /**
@@ -87,6 +125,21 @@ export async function processLessonCompletionEvent(actor: Actor, lessonProgressI
   });
   if (!completionAward.alreadyAwarded) xpGrantedNow += completionAward.event.xpAwarded;
 
+  // Fase "vidas/joias" — joia de conclusão de lição, mesma âncora de
+  // idempotência do XP de conclusão acima (chave igual, tabela diferente:
+  // `GamificationEvent` vs `GemTransaction`, sem colisão entre elas).
+  let gemsGrantedNow = 0;
+  const gemAward = await creditGems({
+    userId: progress.userId,
+    type: GEM_EVENT_TYPES.LESSON_COMPLETED,
+    idempotencyKey: `${GEM_EVENT_TYPES.LESSON_COMPLETED}:${lessonProgressId}`,
+    amount: GEM_REWARDS.LESSON_COMPLETED,
+    referenceType: "LessonProgress",
+    referenceId: lessonProgressId,
+    metadata: { lessonId: progress.lessonId, lessonTitle: progress.lesson.title },
+  });
+  if (!gemAward.alreadyProcessed) gemsGrantedNow += gemAward.transaction.amount;
+
   const correctBlocks = await prisma.lessonBlockCompletion.findMany({
     where: { lessonProgressId, isCorrect: true },
   });
@@ -103,7 +156,7 @@ export async function processLessonCompletionEvent(actor: Actor, lessonProgressI
     if (!award.alreadyAwarded) xpGrantedNow += award.event.xpAwarded;
   }
 
-  return finalizeGamificationProcessing(progress.userId, xpGrantedNow);
+  return finalizeGamificationProcessing(progress.userId, xpGrantedNow, gemsGrantedNow);
 }
 
 /**

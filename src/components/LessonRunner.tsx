@@ -16,7 +16,10 @@ import {
   startLessonAction,
   submitLessonActivityAction,
   completeLessonAction,
+  refillHeartsWithGemsAction,
 } from "@/server/actions/lesson-actions";
+import type { HeartsState } from "@/modules/gamification/server/services/hearts.service";
+import { GEM_COST_PER_HEART } from "@/config/hearts";
 import { QuestionRenderer, type PublicQuestionViewLike } from "./QuestionRenderer";
 import { QuestionFeedback } from "./QuestionFeedback";
 import { ProgressBar } from "./ProgressBar";
@@ -49,28 +52,37 @@ export interface LessonSessionSnapshot {
   accuracy: number | null;
 }
 
-type Phase = "not-started" | "block" | "feedback" | "completing" | "completed" | "error";
+type Phase =
+  "not-started" | "block" | "feedback" | "completing" | "completed" | "error" | "hearts-exhausted";
 
 export function LessonRunner({
   lessonId,
   lessonTitle,
   blocks,
   initialSession,
+  initialHearts,
+  initialGemBalance,
   character = NEUTRAL_CHARACTER,
 }: {
   lessonId: string;
   lessonTitle: string;
   blocks: LessonBlockData[];
   initialSession: LessonSessionSnapshot;
+  /** Estado de baterias no momento em que a página carregou (fase "vidas/joias"). */
+  initialHearts: HeartsState;
+  /** Saldo de joias no momento em que a página carregou — só para mostrar se dá para recarregar. */
+  initialGemBalance: number;
   /** Personagem associado à escola/teoria do conteúdo (`resolveCharacterForLesson`,
    * `src/lib/characters.ts`) — cai no neutro quando não houver associação real. */
   character?: CharacterDef;
 }) {
   const [session, setSession] = useState(initialSession);
   const [phase, setPhase] = useState<Phase>(
-    initialSession.status === "NOT_STARTED" && initialSession.blocksCompleted === 0
-      ? "not-started"
-      : "block",
+    initialHearts.current <= 0
+      ? "hearts-exhausted"
+      : initialSession.status === "NOT_STARTED" && initialSession.blocksCompleted === 0
+        ? "not-started"
+        : "block",
   );
   const [feedback, setFeedback] = useState<{
     isCorrect: boolean;
@@ -80,6 +92,10 @@ export function LessonRunner({
   const [completionResult, setCompletionResult] = useState<Awaited<
     ReturnType<typeof completeLessonAction>
   > | null>(null);
+  const [hearts, setHearts] = useState<HeartsState>(initialHearts);
+  const [gemBalance, setGemBalance] = useState(initialGemBalance);
+  const [refillError, setRefillError] = useState<string | null>(null);
+  const [refilling, setRefilling] = useState(false);
 
   const currentBlock = session.currentBlock
     ? blocks.find((b) => b.id === session.currentBlock!.id)
@@ -105,6 +121,11 @@ export function LessonRunner({
         answerData,
         timeSpentMs: now() - blockStartedAt,
       });
+      setHearts(result.hearts);
+      if (result.blocked) {
+        setPhase("hearts-exhausted");
+        return;
+      }
       setSession(result);
       if (currentBlock.type === "QUESTION") {
         setFeedback({ isCorrect: !!result.isCorrect, explanation: result.explanation });
@@ -115,6 +136,32 @@ export function LessonRunner({
       }
     } catch {
       setPhase("error");
+    }
+  }
+
+  /** Compra 1 bateria com joia (fase "vidas/joias") — só chamada a partir da tela de "sem baterias". */
+  async function handleRefillHearts() {
+    setRefilling(true);
+    setRefillError(null);
+    try {
+      const result = await refillHeartsWithGemsAction({
+        count: 1,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      setHearts(result.hearts);
+      setGemBalance(result.gemBalance);
+      if (result.hearts.current > 0) {
+        setBlockStartedAt(now());
+        setPhase(
+          session.status === "NOT_STARTED" && session.blocksCompleted === 0
+            ? "not-started"
+            : "block",
+        );
+      }
+    } catch {
+      setRefillError("Não foi possível recarregar — confira se você tem joias suficientes.");
+    } finally {
+      setRefilling(false);
     }
   }
 
@@ -137,6 +184,39 @@ export function LessonRunner({
 
   if (phase === "error") {
     return <ErrorState message="Não foi possível continuar esta lição." />;
+  }
+
+  if (phase === "hearts-exhausted") {
+    const canAfford = gemBalance >= GEM_COST_PER_HEART;
+    return (
+      <div className="card stack" style={{ textAlign: "center" }}>
+        <span style={{ fontSize: "2.5rem" }} aria-hidden="true">
+          💔
+        </span>
+        <h1 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Você ficou sem baterias</h1>
+        <p style={{ color: "var(--color-text-muted)" }}>
+          Espere a recarga automática (1 bateria a cada 30 minutos) ou use joia para continuar agora
+          mesmo.
+        </p>
+        <p style={{ fontWeight: 700 }}>💎 Você tem {gemBalance} joia(s)</p>
+        {refillError ? (
+          <p role="alert" style={{ color: "var(--color-danger)" }}>
+            {refillError}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!canAfford || refilling}
+          onClick={handleRefillHearts}
+        >
+          {refilling ? "Recarregando…" : `Recarregar 1 bateria (${GEM_COST_PER_HEART} 💎)`}
+        </button>
+        <Link href="/dashboard" className="btn btn-secondary">
+          Voltar ao início
+        </Link>
+      </div>
+    );
   }
 
   if (phase === "not-started") {
@@ -192,6 +272,19 @@ export function LessonRunner({
             +{gamification.xpGrantedNow} XP
           </p>
         ) : null}
+        {gamification && gamification.gemsGrantedNow > 0 ? (
+          <p
+            className="xp-gain-pop"
+            style={{
+              fontSize: "1.1rem",
+              fontWeight: 800,
+              color: "var(--color-brand)",
+              textAlign: "center",
+            }}
+          >
+            +{gamification.gemsGrantedNow} 💎
+          </p>
+        ) : null}
         {nextAction ? (
           <div className="card" style={{ textAlign: "center" }}>
             <p className="card-title">Próximo passo</p>
@@ -234,10 +327,22 @@ export function LessonRunner({
 
   return (
     <div className="stack">
-      <ProgressBar
-        value={session.percentage}
-        label={`Bloco ${currentBlock.order + 1} de ${session.blocksTotal} — ${formatPercentage(session.percentage)}`}
-      />
+      <div className="row-wrap" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <ProgressBar
+            value={session.percentage}
+            label={`Bloco ${currentBlock.order + 1} de ${session.blocksTotal} — ${formatPercentage(session.percentage)}`}
+          />
+        </div>
+        <span
+          className="badge badge-muted"
+          style={{ flexShrink: 0 }}
+          title={`${hearts.current} de ${hearts.max} baterias`}
+          aria-label={`${hearts.current} de ${hearts.max} baterias`}
+        >
+          ❤️ {hearts.current}
+        </span>
+      </div>
 
       {phase === "feedback" && feedback ? (
         <>

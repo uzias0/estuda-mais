@@ -17,6 +17,7 @@ import {
   processDiagnosticCompletionEvent,
 } from "./gamification-events.service";
 import { getTotalXp } from "./xp.service";
+import { getGemBalance } from "./gems.service";
 import {
   startLesson,
   submitLessonActivity,
@@ -50,6 +51,7 @@ import {
   createFixtureQuestionKnowledgeTag,
   createFixturePublishedLesson,
   createFixtureReviewItem,
+  createFixtureAchievement,
   cleanupFixtures,
 } from "@/test/fixtures";
 
@@ -111,6 +113,7 @@ describe("Gamification events service", () => {
   const questionAttemptIds: string[] = [];
   const simulationIds: string[] = [];
   const simulationAttemptIds: string[] = [];
+  const achievementIds: string[] = [];
 
   const student = () => ({ userId: studentId, role: Role.STUDENT });
   const other = () => ({ userId: otherStudentId, role: Role.STUDENT });
@@ -158,8 +161,14 @@ describe("Gamification events service", () => {
       const completed = await completeLesson(student(), lesson.id);
 
       const before = await getTotalXp(student(), studentId);
+      const gemsBefore = await getGemBalance(studentId);
       const result = await processLessonCompletionEvent(student(), completed.lessonProgressId!);
       expect(result.xpGrantedNow).toBe(50 + 10); // LESSON_COMPLETED + LESSON_QUESTION_CORRECT
+      // >= (não ===): uma conquista global concorrente (mesma nota de XP,
+      // abaixo) também pode conceder joia de conquista nesta mesma chamada.
+      expect(result.gemsGrantedNow).toBeGreaterThanOrEqual(10); // GEM_REWARDS.LESSON_COMPLETED
+      const gemsAfter = await getGemBalance(studentId);
+      expect(gemsAfter - gemsBefore).toBeGreaterThanOrEqual(10);
       const after = await getTotalXp(student(), studentId);
       // >= 60 XP de atividade + o bônus de meta diária (25) que esses 60
       // cruzam (meta padrão = 20 XP/dia). Não é uma igualdade exata: outras
@@ -180,8 +189,71 @@ describe("Gamification events service", () => {
       // por isso `afterAgain >= after`, não `===`).
       const again = await processLessonCompletionEvent(student(), completed.lessonProgressId!);
       expect(again.xpGrantedNow).toBe(0);
+      expect(again.gemsGrantedNow).toBe(0); // nenhuma conquista NOVA na segunda chamada.
       const afterAgain = await getTotalXp(student(), studentId);
       expect(afterAgain).toBeGreaterThanOrEqual(after);
+    });
+
+    it("conquista desbloqueada AGORA também concede joia, uma única vez (fase 'vidas/joias')", async () => {
+      const freshStudent = await createFixtureUser("evt-lesson-gem-achievement", Role.STUDENT);
+      userIds.push(freshStudent.id);
+      const freshActor = { userId: freshStudent.id, role: Role.STUDENT };
+
+      const achievement = await createFixtureAchievement(
+        "evt-gem-first-lesson",
+        { type: "LESSONS_COMPLETED", count: 1 },
+        { xpReward: 40 },
+      );
+      achievementIds.push(achievement.id);
+
+      const source = await createFixtureSource("evt-lesson-gem");
+      sourceIds.push(source.id);
+      const question = await createFixtureMultipleChoiceQuestion("evt-lesson-gem", source.id, {
+        correctIndex: 0,
+      });
+      questionIds.push(question.id);
+      const correctOptionId = question.options.find((o) => o.isCorrect)!.id;
+
+      const {
+        lesson,
+        source: lessonSource,
+        citation,
+        blocks,
+      } = await createFixturePublishedLesson("evt-lesson-gem", {
+        blocks: [{ type: "QUESTION", questionId: question.id }],
+      });
+      lessonIds.push(lesson.id);
+      sourceIds.push(lessonSource.id);
+      citationIds.push(citation.id);
+
+      await startLesson(freshActor, lesson.id);
+      await submitLessonActivity(freshActor, {
+        lessonId: lesson.id,
+        blockId: blocks[0].id,
+        answerData: { type: "MULTIPLE_CHOICE", selectedOptionId: correctOptionId },
+        timeSpentMs: 500,
+      });
+      const completed = await completeLesson(freshActor, lesson.id);
+
+      const result = await processLessonCompletionEvent(freshActor, completed.lessonProgressId!);
+      expect(result.unlockedAchievements.some((o) => o.achievement.id === achievement.id)).toBe(
+        true,
+      );
+      // >= 10 (LESSON_COMPLETED) + 25 (ACHIEVEMENT_UNLOCKED desta fixture) —
+      // não "===": outras suítes deste módulo rodam em paralelo contra o
+      // MESMO catálogo global de `Achievement` (ver nota no teste de XP,
+      // acima) e podem ter uma conquista de critério igualmente baixo (ex.:
+      // `achievement.service.test.ts` também cria uma "LESSONS_COMPLETED
+      // >= 1") que este usuário novo também desbloquearia na mesma chamada.
+      expect(result.gemsGrantedNow).toBeGreaterThanOrEqual(10 + 25);
+      const balance = await getGemBalance(freshStudent.id);
+      expect(balance).toBeGreaterThanOrEqual(10 + 25);
+
+      // reprocessar não duplica a joia de conquista.
+      const again = await processLessonCompletionEvent(freshActor, completed.lessonProgressId!);
+      expect(again.gemsGrantedNow).toBe(0);
+      const balanceAfterAgain = await getGemBalance(freshStudent.id);
+      expect(balanceAfterAgain).toBe(balance);
     });
 
     it("rejeita lição ainda não concluída", async () => {
@@ -416,6 +488,7 @@ describe("Gamification events service", () => {
       questionIds,
       conceptIds,
       sourceIds,
+      achievementIds,
       userIds,
     });
     await prisma.$disconnect();

@@ -687,6 +687,9 @@ export async function cleanupFixtures(ids: {
     await prisma.userAchievement.deleteMany({ where: { userId: { in: ids.userIds } } });
     await prisma.streak.deleteMany({ where: { userId: { in: ids.userIds } } });
     await prisma.dailyGoal.deleteMany({ where: { userId: { in: ids.userIds } } });
+    // Fase "vidas/joias" — mesmo padrão: só por `userId`, sem FK de conteúdo.
+    await prisma.gemTransaction.deleteMany({ where: { userId: { in: ids.userIds } } });
+    await prisma.heartState.deleteMany({ where: { userId: { in: ids.userIds } } });
   }
   if (ids.achievementIds?.length) {
     await prisma.userAchievement.deleteMany({

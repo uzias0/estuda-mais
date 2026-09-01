@@ -50,6 +50,10 @@ describe("Gamification summary / student progress", () => {
     expect(summary.academicProgress).toHaveProperty("lessons");
     expect(summary.academicProgress).toHaveProperty("review");
     expect(summary.academicProgress).toHaveProperty("simulation");
+    // Fase "vidas/joias" — usuário novo começa com o máximo de baterias e
+    // zero joia (nunca completou nada que concedesse joia neste teste).
+    expect(summary.hearts).toMatchObject({ current: 25, max: 25, nextRegenAt: null });
+    expect(summary.gemBalance).toBe(0);
   });
 
   it("getStudentProgress compõe lições/revisão/simulados sem erro para quem nunca estudou", async () => {
