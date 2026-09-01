@@ -24,6 +24,7 @@ import {
   submitLessonActivity,
   completeLesson,
   getLessonSession,
+  getWrongLessonBlocks,
 } from "@/modules/pedagogy/server/services/lesson-execution.service";
 import { processLessonCompletionEvent } from "@/modules/gamification/server/services/gamification-events.service";
 import { getNextStudyAction } from "@/modules/study-engine/server/services/study-plan.service";
@@ -81,11 +82,16 @@ export async function submitLessonActivityAction(input: {
 export async function completeLessonAction(lessonId: string) {
   const actor = await requireSessionActor();
   const completed = await completeLesson(actor, lessonId);
-  const gamification = completed.lessonProgressId
-    ? await processLessonCompletionEvent(actor, completed.lessonProgressId)
-    : null;
+  const [gamification, wrongQuestions] = await Promise.all([
+    completed.lessonProgressId
+      ? processLessonCompletionEvent(actor, completed.lessonProgressId)
+      : Promise.resolve(null),
+    completed.lessonProgressId
+      ? getWrongLessonBlocks(completed.lessonProgressId)
+      : Promise.resolve([]),
+  ]);
   const nextAction = await getNextStudyAction(actor, actor.userId);
-  return { completed, gamification, nextAction };
+  return { completed, gamification, nextAction, wrongQuestions };
 }
 
 /**

@@ -14,6 +14,7 @@ import {
   submitLessonActivity,
   completeLesson,
   getLessonSession,
+  getWrongLessonBlocks,
 } from "./lesson-execution.service";
 import {
   createFixtureUser,
@@ -402,6 +403,62 @@ describe("Lesson execution service", () => {
     );
     const adminView = await getLessonSession(admin(), lesson.id, studentId);
     expect(adminView.lessonProgressId).not.toBeNull();
+  });
+
+  it("getWrongLessonBlocks (fase 'revisão pós-lição'): devolve só os blocos QUESTION errados, com prompt/explicação, ordenados", async () => {
+    const source = await createFixtureSource("exec-review");
+    sourceIds.push(source.id);
+    const correctQuestion = await createFixtureMultipleChoiceQuestion("exec-review-ok", source.id, {
+      correctIndex: 0,
+    });
+    const wrongQuestion = await createFixtureMultipleChoiceQuestion(
+      "exec-review-wrong",
+      source.id,
+      { correctIndex: 0 },
+    );
+    questionIds.push(correctQuestion.id, wrongQuestion.id);
+    await prisma.question.update({
+      where: { id: wrongQuestion.id },
+      data: { explanation: "TEST_FIXTURE_explicacao_exec_review" },
+    });
+    const correctOptionId = correctQuestion.options.find((o) => o.isCorrect)!.id;
+    const wrongOptionId = wrongQuestion.options.find((o) => !o.isCorrect)!.id;
+
+    const {
+      lesson,
+      source: lessonSource,
+      citation,
+      blocks,
+    } = await createFixturePublishedLesson("exec-review-lesson", {
+      blocks: [
+        { type: "QUESTION", questionId: correctQuestion.id },
+        { type: "QUESTION", questionId: wrongQuestion.id },
+      ],
+    });
+    lessonIds.push(lesson.id);
+    sourceIds.push(lessonSource.id);
+    citationIds.push(citation.id);
+
+    const progress = await startLesson(student(), lesson.id);
+    await submitLessonActivity(student(), {
+      lessonId: lesson.id,
+      blockId: blocks[0].id,
+      answerData: { type: "MULTIPLE_CHOICE", selectedOptionId: correctOptionId },
+      timeSpentMs: 100,
+    });
+    await submitLessonActivity(student(), {
+      lessonId: lesson.id,
+      blockId: blocks[1].id,
+      answerData: { type: "MULTIPLE_CHOICE", selectedOptionId: wrongOptionId },
+      timeSpentMs: 100,
+    });
+    await completeLesson(student(), lesson.id);
+
+    const wrong = await getWrongLessonBlocks(progress.lessonProgressId!);
+    expect(wrong).toHaveLength(1);
+    expect(wrong[0].questionId).toBe(wrongQuestion.id);
+    expect(wrong[0].prompt).toBe(wrongQuestion.prompt);
+    expect(wrong[0].explanation).toBe("TEST_FIXTURE_explicacao_exec_review");
   });
 
   afterAll(async () => {

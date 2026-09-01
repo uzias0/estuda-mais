@@ -6,7 +6,12 @@
  * resultado está sempre dentro do conjunto esperado, nunca um valor exato.
  */
 import { describe, it, expect } from "vitest";
-import { answerReaction, lessonStartReaction, LESSON_COMPLETE_REACTION } from "./reactions";
+import {
+  answerReaction,
+  lessonStartReaction,
+  LESSON_COMPLETE_REACTION,
+  lessonCompleteReaction,
+} from "./reactions";
 
 describe("answerReaction", () => {
   it("resposta correta: expressão 'happy', mensagem não vazia", () => {
@@ -54,5 +59,22 @@ describe("LESSON_COMPLETE_REACTION", () => {
   it("é uma reação de celebração fixa (não varia)", () => {
     expect(LESSON_COMPLETE_REACTION.expression).toBe("celebrating");
     expect(LESSON_COMPLETE_REACTION.message.length).toBeGreaterThan(0);
+  });
+});
+
+describe("lessonCompleteReaction", () => {
+  it("aproveitamento null ou <100: devolve a reação genérica de conclusão", () => {
+    expect(lessonCompleteReaction(null)).toEqual(LESSON_COMPLETE_REACTION);
+    expect(lessonCompleteReaction(0)).toEqual(LESSON_COMPLETE_REACTION);
+    expect(lessonCompleteReaction(99.99)).toEqual(LESSON_COMPLETE_REACTION);
+  });
+
+  it("aproveitamento 100: devolve uma mensagem personalizada de celebração, diferente da genérica", () => {
+    for (let i = 0; i < 20; i++) {
+      const r = lessonCompleteReaction(100);
+      expect(r.expression).toBe("celebrating");
+      expect(r.message.length).toBeGreaterThan(0);
+      expect(r.message).not.toBe(LESSON_COMPLETE_REACTION.message);
+    }
   });
 });

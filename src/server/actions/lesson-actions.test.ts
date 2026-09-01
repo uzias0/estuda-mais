@@ -85,6 +85,10 @@ describe("Lesson Server Actions", () => {
     const completion = await completeLessonAction(lesson.id);
     expect(completion.completed.status).toBe("COMPLETED"); // não MASTERED — aproveitamento 0%.
     expect(completion.gamification?.xpGrantedNow).toBe(50); // só o XP de conclusão, nunca o de questão correta.
+    // Fase "revisão pós-lição": a única questão da lição foi respondida
+    // errada de propósito acima — deve aparecer na lista de revisão.
+    expect(completion.wrongQuestions).toHaveLength(1);
+    expect(completion.wrongQuestions[0].questionId).toBe(question.id);
 
     const after = await getTotalXp(actor, actor.userId);
     expect(after - before).toBeGreaterThanOrEqual(50);

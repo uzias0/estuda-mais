@@ -31,7 +31,7 @@ import {
   answerReaction,
   lessonStartReaction,
   LESSON_START_REACTION_FALLBACK,
-  LESSON_COMPLETE_REACTION,
+  lessonCompleteReaction,
   NEUTRAL_CHARACTER,
   type Reaction,
 } from "./characters/reactions";
@@ -297,12 +297,12 @@ export function LessonRunner({
   }
 
   if (phase === "completed" && completionResult) {
-    const { completed, gamification, nextAction } = completionResult;
+    const { completed, gamification, nextAction, wrongQuestions } = completionResult;
     return (
       <div className="stack">
         <CharacterCelebration
           character={character}
-          title={LESSON_COMPLETE_REACTION.message}
+          title={lessonCompleteReaction(completed.accuracy).message}
           subtitle={
             completed.accuracy !== null
               ? `Aproveitamento: ${formatPercentage(completed.accuracy)}`
@@ -339,6 +339,31 @@ export function LessonRunner({
             +{gamification.gemsGrantedNow}{" "}
             <Gem size={16} color="var(--color-gem)" fill="var(--color-gem)" aria-hidden="true" />
           </p>
+        ) : null}
+        {wrongQuestions.length > 0 ? (
+          <div className="card stack">
+            <p className="card-title">Revisão — o que revisar nesta lição</p>
+            {wrongQuestions.map((wrong) => (
+              <div
+                key={wrong.questionId}
+                className="card card--tight"
+                style={{ borderColor: "var(--color-danger)" }}
+              >
+                <p style={{ fontWeight: 700 }}>{wrong.prompt}</p>
+                {wrong.explanation ? (
+                  <p
+                    style={{
+                      color: "var(--color-text-muted)",
+                      fontSize: "0.85rem",
+                      marginTop: 6,
+                    }}
+                  >
+                    {wrong.explanation}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
         ) : null}
         {nextAction ? (
           <div className="card" style={{ textAlign: "center" }}>

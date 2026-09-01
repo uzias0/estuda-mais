@@ -92,6 +92,28 @@ export const LESSON_COMPLETE_REACTION: Reaction = {
   message: "Lição concluída! Mais um passo na sua jornada.",
 };
 
+/**
+ * Fase "revisão pós-lição" (pedido do usuário: "se ela acertou cem por
+ * cento, aí deu um parabéns, deu uma resposta personalizada") — mensagem
+ * própria, mais efusiva, só para quando o aproveitamento é 100%. Variação
+ * real (`pick`) é segura aqui: só é chamada depois que o estudante conclui
+ * a lição (ação do cliente), nunca durante a renderização inicial —
+ * mesma garantia de `answerReaction`/`lessonStartReaction` acima.
+ */
+const PERFECT_LESSON_MESSAGES = [
+  "Show! 100% de acerto nesta lição — mandou muito bem!",
+  "Perfeito! Você acertou todas as questões desta lição.",
+  "Impecável! Aproveitamento de 100% — continue assim!",
+];
+
+/** Reação de conclusão de lição, personalizada quando o aproveitamento é 100%. */
+export function lessonCompleteReaction(accuracy: number | null): Reaction {
+  if (accuracy === 100) {
+    return { expression: "celebrating", message: pick(PERFECT_LESSON_MESSAGES) };
+  }
+  return LESSON_COMPLETE_REACTION;
+}
+
 export const ACHIEVEMENT_REACTION: Reaction = {
   expression: "celebrating",
   message: "Você desbloqueou uma conquista!",

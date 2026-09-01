@@ -276,6 +276,49 @@ export async function completeLesson(actor: Actor, lessonId: string) {
 }
 
 /**
+ * Fase "revisão pós-lição" (pedido do usuário: "ao fim de toda a tarefa
+ * você tem que fazer uma revisão de erros que a pessoa teve") — busca os
+ * blocos QUESTION errados de uma execução já concluída, com o enunciado e
+ * a explicação da própria `Question` (Módulo 3), para o estudante entender
+ * o que errou sem precisar abrir a questão de novo. `lessonProgressId` já
+ * vem do chamador (`completeLessonAction`) derivado de um `completeLesson`
+ * que já validou que pertence ao `actor` — não recebe `actor` aqui de
+ * propósito, não é uma Server Action própria, só uma leitura auxiliar
+ * interna (mesmo padrão de `evaluateAndRewardWeeklyMissions` no Módulo 9:
+ * função "interna" vs. uma exportada com checagem de privacidade própria).
+ */
+export async function getWrongLessonBlocks(lessonProgressId: string) {
+  const completions = await prisma.lessonBlockCompletion.findMany({
+    where: { lessonProgressId, isCorrect: false },
+    include: { lessonBlock: { select: { order: true, questionId: true } } },
+  });
+
+  const questionIds = completions
+    .map((c) => c.lessonBlock.questionId)
+    .filter((id): id is string => id !== null);
+  if (questionIds.length === 0) return [];
+
+  const questions = await prisma.question.findMany({
+    where: { id: { in: questionIds } },
+    select: { id: true, prompt: true, explanation: true },
+  });
+  const questionById = new Map(questions.map((q) => [q.id, q]));
+
+  return completions
+    .filter((c) => c.lessonBlock.questionId !== null)
+    .map((c) => {
+      const question = questionById.get(c.lessonBlock.questionId!);
+      return {
+        blockOrder: c.lessonBlock.order,
+        questionId: c.lessonBlock.questionId!,
+        prompt: question?.prompt ?? "",
+        explanation: question?.explanation ?? null,
+      };
+    })
+    .sort((a, b) => a.blockOrder - b.blockOrder);
+}
+
+/**
  * Estado atual de execução (seção 12/14) — puramente leitura. Sem
  * `LessonProgress` ainda (lição nunca iniciada por este usuário), devolve o
  * estado inicial (NOT_STARTED, nenhum bloco concluído) sem gravar nada.
