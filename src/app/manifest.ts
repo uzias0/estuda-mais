@@ -3,9 +3,9 @@ import type { MetadataRoute } from "next";
 /**
  * Web App Manifest (fase mobile/PWA, seção 10) — arquivo especial do Next.js
  * (App Router), servido automaticamente em `/manifest.webmanifest`. `name`/
- * `short_name`/ícones reaproveitam a marca já usada em `Header.tsx` ("🧠
- * Estuda+") e os tokens de cor de `globals.css` — nenhuma identidade nova
- * criada, nenhum asset de terceiro. `display: "standalone"` +
+ * `short_name`/ícones reaproveitam o monograma "E+" de `app-icon.tsx`
+ * (fase "logo própria") e os tokens de cor de `globals.css` — nenhuma
+ * identidade nova criada, nenhum asset de terceiro. `display: "standalone"` +
  * `orientation: "portrait-primary"` são o que torna o app instalável e o
  * abre sem a barra de endereço do navegador, como pedido na seção 10.
  */

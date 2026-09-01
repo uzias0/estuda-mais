@@ -9,13 +9,19 @@
  */
 export const dynamic = "force-static";
 
+import { WifiOff } from "lucide-react";
+
 export default function OfflinePage() {
   return (
     <div className="page-container" style={{ textAlign: "center", paddingTop: "20vh" }}>
       <div className="card stack" style={{ maxWidth: 420, margin: "0 auto" }}>
-        <span aria-hidden="true" style={{ fontSize: "2.5rem" }}>
-          🧠📴
-        </span>
+        <WifiOff
+          size={44}
+          color="var(--color-text-muted)"
+          strokeWidth={1.75}
+          aria-hidden="true"
+          style={{ alignSelf: "center" }}
+        />
         <h1 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Sem conexão no momento</h1>
         <p style={{ color: "var(--color-text-muted)" }}>
           Verifique sua internet e tente novamente. Seu progresso é sempre calculado e salvo pelo
