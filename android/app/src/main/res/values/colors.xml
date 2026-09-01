@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Cores nativas do Android — mesmos tokens de marca já usados em toda a
-  aplicação web (`src/app/globals.css`: `--color-brand`/`--color-brand-strong`)
-  e no manifest PWA (`src/app/manifest.ts`: theme_color "#5b5bf0"). Nenhuma
-  identidade nova criada aqui, só espelhando a marca real do app.
+  aplicação web (src/app/globals.css: custom properties color-brand e
+  color-brand-strong) e no manifest PWA (src/app/manifest.ts: theme_color
+  "#5b5bf0"). Nenhuma identidade nova criada aqui, só espelhando a marca
+  real do app.
+
+  NOTA: comentários XML não podem conter hifens duplicados em nenhum lugar
+  do texto, nem mesmo dentro de outra palavra — por isso os nomes das
+  custom properties CSS acima aparecem sem o prefixo usual delas; um erro
+  real de build (mergeDebugResources) foi encontrado e corrigido por causa
+  disso nesta sessão.
 
   ACHADO NA AUDITORIA (fase de fechamento/APK): o template gerado por
   `npx cap add android` referencia `@color/colorPrimary`/`colorPrimaryDark`/

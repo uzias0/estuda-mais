@@ -221,31 +221,52 @@ Render/Fly.io equivalentes):
 
 ### 6.5 Gerar o APK
 
-`npm run android:build` (`scripts/android-build.mjs`, novo nesta fase) —
-verifica Java 17+/`ANDROID_HOME` ANTES de chamar o Gradle e explica
-exatamente o que corrigir, em vez de expor só o stack trace cru.
+`npm run android:build` (`scripts/android-build.mjs`) — verifica Java/
+`ANDROID_HOME` ANTES de chamar o Gradle e explica exatamente o que
+corrigir, em vez de expor só o stack trace cru.
 
-**Tentado nesta sessão, documentado honestamente**: o ambiente sandbox
-tinha só Java 8 e nenhum Android SDK instalado. O script novo detectou os
-dois problemas corretamente e parou antes do Gradle, com esta saída real:
+**Build real gerado com sucesso nesta sessão** (não só tentado — o `.apk`
+existe de verdade), depois de instalar Android Studio + Android SDK + JDK
+21 (Temurin) na máquina usada nesta sessão:
 
 ```
-[android:build] Pré-requisitos ausentes — o build NÃO foi iniciado:
-  - Java 8 encontrado — o Android Gradle Plugin exige Java 11+ (recomendado 17+)...
-  - ANDROID_HOME/ANDROID_SDK_ROOT não definida ou aponta para um diretório inexistente...
+BUILD SUCCESSFUL in 37s
+93 actionable tasks: 54 executed, 39 up-to-date
+[android:build] APK gerado com sucesso: android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Também confirmamos, numa tentativa anterior desta mesma sessão, que o
-`./gradlew assembleDebug` cru falha exatamente como esperado ao chegar no
-Gradle (`Dependency requires at least JVM runtime version 11. This build
-uses a Java 8 JVM.`) — o Gradle chegou a baixar sua própria distribuição e
-começar a resolver dependências, confirmando que a estrutura do projeto
-Android está correta. Só falta o ambiente de build (JDK 17+/Android SDK),
-que só existe na SUA máquina (ou em CI), não neste sandbox. Nenhuma
-tentativa de instalar Android SDK foi feita aqui, por decisão sua.
+Confirmado: ~5,3 MB, `applicationId com.estudamais.app`,
+`versionName 1.0.0-beta.1`, `server.url` apontando para o staging real
+(`https://estuda-mais-lqwv.onrender.com`).
 
-**Na sua máquina**, com Android Studio instalado (que já traz JDK 17+ e o
-SDK Manager):
+**JDK — atenção à versão exata** (descoberto rodando o build de verdade,
+não por leitura estática): `@capacitor/android` 8.5.0 compila com
+`--release 21`, então **JDK 17 falha** (`invalid source release: 21`); e o
+Gradle 8.14.3 deste projeto **falha ao rodar sob JDK 25**
+(`Unsupported class file major version 69`) — o JBR embutido em versões
+recentes do Android Studio pode já vir nessa versão. **JDK 21 (LTS) é a
+versão testada e recomendada** — instale à parte se necessário:
+
+```bash
+winget install --id EclipseAdoptium.Temurin.21.JDK -e   # Windows
+```
+
+e aponte `JAVA_HOME` para ela (não precisa desinstalar outras versões).
+Guia completo de instalação em `docs/ANDROID-TESTE.md`, seção 0.
+
+**2 bugs reais encontrados e corrigidos** rodando o Gradle de verdade
+(nenhum dos dois seria detectado só lendo o código):
+
+1. `scripts/android-build.mjs` resolvia `gradlew.bat` de forma relativa
+   (`cwd` + `shell:true`), o que falhava no Windows — corrigido para usar
+   o caminho absoluto do wrapper.
+2. `android/app/src/main/res/values/colors.xml` tinha um comentário XML
+   citando literalmente as custom properties CSS com seu prefixo usual —
+   XML proíbe hifens duplicados em qualquer lugar de um comentário, não só
+   fora do fechamento. Corrigido o texto do comentário.
+
+Comando completo usado (sua máquina, com Android Studio + JDK 21 já
+instalados):
 
 ```bash
 export CAPACITOR_SERVER_URL="https://seu-staging-real.exemplo.com"

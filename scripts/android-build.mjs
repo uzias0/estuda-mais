@@ -48,17 +48,36 @@ function checkPrerequisites() {
   const javaOutput = getJavaMajorVersion();
   if (!javaOutput) {
     problems.push(
-      "Java não encontrado no PATH. Instale o JDK 17+ (o Android Studio já inclui um em " +
-        "'Android Studio > Settings > Build Tools > Gradle > Gradle JDK') e garanta que `java -version` funcione no terminal.",
+      "Java não encontrado no PATH. Instale o JDK 21 (LTS) — ex.: Eclipse Temurin 21 " +
+        "(`winget install EclipseAdoptium.Temurin.21.JDK` no Windows) — e aponte JAVA_HOME/PATH " +
+        "para ele. Garanta que `java -version` funcione no terminal.",
     );
   } else {
     const major = parseJavaMajor(javaOutput);
     if (major === null) {
       problems.push(`Não consegui interpretar a versão do Java a partir de: ${javaOutput.trim()}`);
-    } else if (major < 17) {
+    } else if (major < 21) {
+      // Verificado nesta sessão (build real): `@capacitor/android` 8.5.0
+      // compila o Java com `--release 21` — JDK 17 falha com "invalid
+      // source release: 21" no módulo `capacitor-android`. JDK 11/17 NÃO
+      // são suficientes, mesmo sendo aceitos pelo Android Gradle Plugin em
+      // outros contextos.
       problems.push(
-        `Java ${major} encontrado — o Android Gradle Plugin exige Java 11+ (recomendado 17+). ` +
-          "Instale um JDK 17+ e aponte JAVA_HOME/PATH para ele (o Android Studio já traz um embutido).",
+        `Java ${major} encontrado — este projeto precisa especificamente do JDK 21 (LTS): ` +
+          "`@capacitor/android` 8.5.0 compila com --release 21, então JDK 17 falha com " +
+          '"invalid source release: 21" (confirmado nesta sessão). Instale o JDK 21 ' +
+          "(`winget install EclipseAdoptium.Temurin.21.JDK` no Windows) e aponte JAVA_HOME para ele.",
+      );
+    } else if (major > 23) {
+      // Também verificado nesta sessão: o Gradle 8.14.3 (usado por este
+      // projeto Android) falha ao rodar sob JDK 25 ("Unsupported class
+      // file major version 69" — o próprio Gradle não inicia, não é erro
+      // de compilação do app). JDK 21 é a versão testada e recomendada.
+      problems.push(
+        `Java ${major} encontrado — pode ser recente demais para o Gradle 8.14.3 deste projeto ` +
+          '(JDK 25 falhou aqui com "Unsupported class file major version 69", um erro do próprio ' +
+          "Gradle, não do código). Use o JDK 21 (LTS), a versão testada e recomendada para este " +
+          "projeto — instale outra versão e aponte JAVA_HOME para ela sem precisar desinstalar a atual.",
       );
     }
   }
@@ -95,7 +114,11 @@ function main() {
   }
 
   console.log("[android:build] pré-requisitos ok — rodando o Gradle (pode demorar na 1ª vez)...");
-  const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew";
+  // Caminho ABSOLUTO para o wrapper — resolução relativa via `cwd` +
+  // `shell:true` se mostrou não confiável no Windows (bug real encontrado
+  // nesta sessão: cmd.exe não localizava `gradlew.bat` mesmo com `cwd`
+  // correto). Caminho absoluto elimina a ambiguidade.
+  const gradlew = path.join(ANDROID_DIR, process.platform === "win32" ? "gradlew.bat" : "gradlew");
   const result = spawnSync(gradlew, ["assembleDebug"], {
     cwd: ANDROID_DIR,
     stdio: "inherit",

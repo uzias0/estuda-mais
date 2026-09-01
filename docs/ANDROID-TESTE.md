@@ -6,24 +6,43 @@
 
 ## 0. O que você precisa (uma vez só)
 
-1. **Android Studio** (inclui JDK 17+ embutido e o Android SDK Manager) —
+1. **Android Studio** (inclui o Android SDK Manager) —
    [developer.android.com/studio](https://developer.android.com/studio).
 2. Durante a instalação, deixe o assistente instalar o **Android SDK**
    (padrão). Anote o caminho mostrado em
    `Android Studio > Settings > Languages & Frameworks > Android SDK`
    (Windows costuma ser `%LOCALAPPDATA%\Android\Sdk`).
-3. Configure as variáveis de ambiente (uma vez):
-   - `ANDROID_HOME` (ou `ANDROID_SDK_ROOT`) = caminho do passo 2.
-   - Adicione ao `PATH`: `%ANDROID_HOME%\platform-tools` (dá acesso ao `adb`).
-4. Confirme no terminal:
+3. **JDK 21 (LTS) — instale à parte, não confie só no JDK embutido do
+   Android Studio.** Testado de verdade nesta sessão: o JBR (JetBrains
+   Runtime) que vem junto do Android Studio pode ser mais novo que o
+   Gradle deste projeto suporta (ex.: JDK 25 faz o Gradle 8.14.3 falhar
+   com `Unsupported class file major version 69` — o próprio Gradle não
+   inicia). E JDK 17 é novo demais para baixo: `@capacitor/android` 8.5.0
+   compila com `--release 21`, então JDK 17 falha com
+   `invalid source release: 21`. **JDK 21 é a versão exata que funcionou
+   e é a recomendada.** Instale:
    ```bash
-   java -version    # precisa mostrar 17 ou mais
+   winget install --id EclipseAdoptium.Temurin.21.JDK -e   # Windows
+   ```
+   (macOS: `brew install --cask temurin21`; Linux: gerenciador de pacotes
+   da distro ou [adoptium.net](https://adoptium.net)).
+4. Configure as variáveis de ambiente (uma vez):
+   - `JAVA_HOME` = pasta de instalação do JDK 21 (ex.:
+     `C:\Program Files\Eclipse Adoptium\jdk-21.x.x-hotspot`).
+   - `ANDROID_HOME` (ou `ANDROID_SDK_ROOT`) = caminho do passo 2.
+   - Adicione ao `PATH`: `%JAVA_HOME%\bin` e `%ANDROID_HOME%\platform-tools`
+     (o segundo dá acesso ao `adb`).
+5. Confirme no terminal:
+   ```bash
+   java -version    # precisa mostrar 21
    adb --version    # precisa reconhecer o comando
    ```
 
-`npm run android:build` (`scripts/android-build.mjs`) verifica os itens 3-4
-automaticamente antes de tentar compilar, e explica exatamente o que
-corrigir se algo estiver faltando.
+`npm run android:build` (`scripts/android-build.mjs`) verifica os itens
+3-4 automaticamente antes de tentar compilar (versão exata do Java e
+`ANDROID_HOME`/`ANDROID_SDK_ROOT`), e explica exatamente o que corrigir se
+algo estiver faltando — testado de verdade nesta sessão, incluindo os dois
+casos reais acima (JDK 17 e JDK 25).
 
 ## 1. Gerar o APK
 
@@ -129,17 +148,37 @@ testador tem instalado — pergunte a versão exibida no Perfil).
 
 ## 7. O que este ambiente conseguiu validar de verdade nesta sessão
 
+Atualizado após a instalação real de Android Studio + JDK 21 na máquina
+usada nesta sessão — **o APK foi de fato compilado**:
+
 - Projeto Android gerado e configurado corretamente (ícones/splash reais,
   permissões mínimas, orientação retrato, `errorPath` de rede) —
   confirmado por leitura e pelos testes automatizados
   (`src/test/mobile-build-config.test.ts`).
-- `npm run android:build` detecta corretamente Java/SDK ausentes/
-  incompatíveis e explica a correção (testado de verdade neste sandbox:
-  Java 8 + SDK ausente → mensagem exata reproduzida).
-- Gradle real chegou a rodar e falhar exatamente no ponto esperado (Java
-  8 incompatível) — nenhum APK foi gerado aqui, porque este ambiente não
-  tem Android SDK/JDK 17+.
-- **Não testado neste ambiente** (exige hardware/SDK reais, que só existem
-  na sua máquina): compilação real do APK, instalação em dispositivo
-  físico, comportamento visual da tela de erro de rede dentro da WebView
-  nativa.
+- `npm run android:build` detecta corretamente Java ausente/incompatível
+  (velho ou novo demais) e `ANDROID_HOME` ausente, explicando a correção —
+  testado nos três casos reais: Java 8 (ausente), JDK 17 (novo demais para
+  o Gradle mas velho demais para o `--release 21` do Capacitor) e JDK 25
+  (novo demais para o Gradle 8.14.3).
+- **`BUILD SUCCESSFUL`** com JDK 21 (Temurin) + Android SDK reais — APK de
+  debug gerado em `android/app/build/outputs/apk/debug/app-debug.apk`
+  (~5,3 MB), `server.url` confirmado apontando para o staging real
+  (`https://estuda-mais-lqwv.onrender.com`), `applicationId
+com.estudamais.app`, `versionName 1.0.0-beta.1`.
+- **2 bugs reais encontrados e corrigidos durante esse build** (não
+  achados por leitura estática, só apareceram rodando o Gradle de
+  verdade):
+  1. `scripts/android-build.mjs` resolvia `gradlew.bat` de forma relativa
+     (via `cwd` + `shell:true`), o que falhava no Windows
+     (`'gradlew.bat' não é reconhecido`) — corrigido para usar o caminho
+     absoluto do wrapper.
+  2. `android/app/src/main/res/values/colors.xml` (criado na fase
+     anterior) tinha um comentário XML citando literalmente `--color-brand`
+     — XML proíbe `--` em qualquer lugar de um comentário, não só fora do
+     fechamento `-->`. O parser de recursos do Android (`mergeDebugResources`)
+     rejeitou o arquivo. Corrigido reescrevendo o comentário sem o prefixo
+     literal das custom properties CSS.
+- **Não testado neste ambiente** (exige hardware físico, que só existe na
+  sua mão): instalação em dispositivo físico via `adb install`,
+  comportamento visual real da tela de erro de rede dentro da WebView
+  nativa, teste do fluxo completo de estudo dentro do app instalado.

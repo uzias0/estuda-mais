@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     // Próprios do projeto:
     "src/generated/**", // código gerado pelo Prisma — nunca editado à mão
     ".dev-db/**", // dados do Postgres de desenvolvimento local
+    "android/**", // projeto nativo Android (Capacitor) — inclui build/ com JS vendorizado (ex.: native-bridge.js), não código nosso; "build/**" acima só cobre a raiz, não subpastas
   ]),
 ]);
 
