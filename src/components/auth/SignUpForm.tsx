@@ -18,11 +18,7 @@ export function SignUpForm() {
   const [state, formAction, pending] = useActionState(signUpAction, initialState);
 
   return (
-    <form
-      action={formAction}
-      className="card stack fade-in-up"
-      style={{ maxWidth: 420, margin: "0 auto" }}
-    >
+    <form action={formAction} className="card auth-card stack fade-in-up">
       <div className="field">
         <label htmlFor="name">Nome</label>
         <input id="name" name="name" className="text-input" required autoComplete="name" />
@@ -59,7 +55,7 @@ export function SignUpForm() {
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? "Criando conta…" : "Criar conta"}
       </button>
-      <p style={{ textAlign: "center", fontSize: "0.9rem" }}>
+      <p className="auth-links">
         Já tem conta? <Link href="/login">Entrar</Link>
       </p>
     </form>

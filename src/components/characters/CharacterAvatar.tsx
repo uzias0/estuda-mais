@@ -6,7 +6,7 @@
  * simples, sempre acompanhada do NOME real no texto ao lado (nunca
  * pretende ser uma fotografia).
  */
-import type { CharacterDef, CharacterExpression } from "@/config/characters";
+import type { CharacterDef, CharacterExpression, CharacterFeatures } from "@/config/characters";
 
 const SIZE_PX: Record<"sm" | "md" | "lg", number> = { sm: 40, md: 64, lg: 112 };
 
@@ -248,6 +248,84 @@ function MouthPath({ expression }: { expression: CharacterExpression }) {
   }
 }
 
+/**
+ * Cabelo (fase de redesign visual, ver comentário em `src/config/characters.ts`)
+ * — desenhado como uma "touca" atrás do rosto: começa antes do EyebrowPaths
+ * para ficar por baixo da testa, mas por cima do círculo de pele.
+ */
+function HairPath({ hair, color }: { hair?: CharacterFeatures["hair"]; color: string }) {
+  switch (hair) {
+    case "bald":
+      // Careca: só uma auréola rala nas laterais/nuca, topo da cabeça à mostra.
+      return (
+        <path
+          d="M10 44 Q6 24 26 16 M90 44 Q94 24 74 16"
+          stroke={color}
+          strokeWidth="5"
+          fill="none"
+          strokeLinecap="round"
+          opacity="0.8"
+        />
+      );
+    case "receding":
+      return <path d="M10 40 Q18 10 50 8 Q82 10 90 40 Q78 20 50 18 Q22 20 10 40 Z" fill={color} />;
+    case "side-part":
+      return <path d="M6 42 Q4 4 52 4 Q94 6 94 42 Q90 14 54 12 Q22 13 14 28 Z" fill={color} />;
+    case "short-neat":
+      return <path d="M6 40 Q4 2 50 2 Q96 2 94 40 Q92 14 50 10 Q8 14 6 40 Z" fill={color} />;
+    case "wavy":
+      return (
+        <path
+          d="M4 40 Q2 4 18 8 Q30 -2 50 4 Q70 -2 82 8 Q98 4 96 40 Q88 12 50 14 Q12 12 4 40 Z"
+          fill={color}
+        />
+      );
+    default:
+      return null;
+  }
+}
+
+function GlassesPath({ glasses }: { glasses?: CharacterFeatures["glasses"] }) {
+  if (glasses === "round") {
+    return (
+      <g stroke="#2a2a2a" strokeWidth="2.5" fill="none">
+        <circle cx="37" cy="47" r="10" />
+        <circle cx="63" cy="47" r="10" />
+        <path d="M47 47 L53 47" />
+      </g>
+    );
+  }
+  if (glasses === "oval") {
+    return (
+      <g stroke="#2a2a2a" strokeWidth="2.5" fill="none">
+        <ellipse cx="37" cy="47" rx="11" ry="8" />
+        <ellipse cx="63" cy="47" rx="11" ry="8" />
+        <path d="M48 46 L52 46" />
+      </g>
+    );
+  }
+  return null;
+}
+
+function FacialHairPath({
+  facialHair,
+  color,
+}: {
+  facialHair?: CharacterFeatures["facialHair"];
+  color: string;
+}) {
+  switch (facialHair) {
+    case "full-beard":
+      return <path d="M26 56 Q28 84 50 88 Q72 84 74 56 Q70 76 50 78 Q30 76 26 56 Z" fill={color} />;
+    case "goatee":
+      return <path d="M42 68 Q50 84 58 68 Q54 78 50 78 Q46 78 42 68 Z" fill={color} />;
+    case "mustache":
+      return <path d="M33 58 Q42 63 50 58 Q58 63 67 58 Q59 67 50 62 Q41 67 33 58 Z" fill={color} />;
+    default:
+      return null;
+  }
+}
+
 export function CharacterAvatar({
   character,
   expression = "neutral",
@@ -258,6 +336,8 @@ export function CharacterAvatar({
   size?: "sm" | "md" | "lg";
 }) {
   const px = SIZE_PX[size];
+  const features = character.features;
+  const hairColor = features?.hairColor ?? "#3a3a3a";
   return (
     <svg
       width={px}
@@ -275,9 +355,12 @@ export function CharacterAvatar({
         stroke={character.colorway.accent}
         strokeWidth="3"
       />
+      <HairPath hair={features?.hair} color={hairColor} />
       <EyebrowPaths expression={expression} />
       <EyePaths expression={expression} />
       <MouthPath expression={expression} />
+      <FacialHairPath facialHair={features?.facialHair} color={hairColor} />
+      <GlassesPath glasses={features?.glasses} />
       {expression === "celebrating" ? (
         <>
           <path d="M14 22 l4 8 8 2-8 3-4 8-3-8-8-3 8-2z" fill="var(--color-xp, #7c4dff)" />

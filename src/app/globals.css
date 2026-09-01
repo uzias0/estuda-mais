@@ -714,6 +714,25 @@ p {
   grid-column: 1 / -1;
 }
 
+/* Base de `.field` (fase de redesign visual) — antes só existia
+ * `.admin-toolbar .field`/`.form-grid .field`, então todo formulário fora
+ * desses dois contêineres (login, cadastro, recuperação de senha) ficava
+ * com label+input sem gap nem estilo nenhum, dependendo só do espaçamento
+ * padrão do navegador — uma causa concreta do "está cru" relatado. Esta
+ * regra vale para qualquer `.field`; as duas acima continuam mais
+ * específicas e seguem no controle onde já se aplicavam. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
 /* Cartão de conquista (fase de redesign, seção 18) — desbloqueada ganha um
  * leve verniz dourado (mesmo tom de `--color-xp`), bloqueada continua neutra. */
 .achievement-card--unlocked {
@@ -1069,4 +1088,59 @@ p {
   .xp-gain-pop {
     animation: none !important;
   }
+}
+
+/* ---- Autenticação: login / cadastro / recuperação de senha ---------------
+ * (queixa real do usuário: "a tela de login está cru, está tudo feio").
+ * Antes era um <div class="page-container"> genérico com um emoji solto —
+ * agora ocupa a viewport inteira, centraliza um cartão elevado e usa o
+ * personagem NEUTRO (`Mente`) como mascote de boas-vindas, reaproveitando
+ * só tokens/classes que já existiam (gradiente de marca, `--shadow-pop`,
+ * `--radius-lg`, `.character-bounce-in`) — nenhuma cor nova. */
+.auth-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background:
+    radial-gradient(circle at 12% 8%, var(--color-brand-bg) 0%, transparent 45%),
+    radial-gradient(circle at 88% 92%, var(--color-brand-bg) 0%, transparent 42%), var(--color-bg);
+}
+
+.auth-panel {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.auth-mascot {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-brand-title {
+  text-align: center;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.auth-brand-subtitle {
+  text-align: center;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.auth-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.auth-links {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
 }

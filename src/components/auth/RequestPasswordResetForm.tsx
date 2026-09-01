@@ -14,11 +14,7 @@ export function RequestPasswordResetForm() {
   const [state, formAction, pending] = useActionState(requestPasswordResetAction, initialState);
 
   return (
-    <form
-      action={formAction}
-      className="card stack fade-in-up"
-      style={{ maxWidth: 420, margin: "0 auto" }}
-    >
+    <form action={formAction} className="card auth-card stack fade-in-up">
       <div className="field">
         <label htmlFor="email">E-mail</label>
         <input
@@ -43,7 +39,7 @@ export function RequestPasswordResetForm() {
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? "Enviando…" : "Enviar link de redefinição"}
       </button>
-      <p style={{ textAlign: "center", fontSize: "0.9rem" }}>
+      <p className="auth-links">
         Lembrou a senha? <Link href="/login">Entrar</Link>
       </p>
     </form>

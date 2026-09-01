@@ -11,11 +11,7 @@ export function LoginForm() {
   const [state, formAction, pending] = useActionState(signInAction, initialState);
 
   return (
-    <form
-      action={formAction}
-      className="card stack fade-in-up"
-      style={{ maxWidth: 420, margin: "0 auto" }}
-    >
+    <form action={formAction} className="card auth-card stack fade-in-up">
       <div className="field">
         <label htmlFor="email">E-mail</label>
         <input
@@ -46,10 +42,10 @@ export function LoginForm() {
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? "Entrando…" : "Entrar"}
       </button>
-      <p style={{ textAlign: "center", fontSize: "0.9rem" }}>
+      <p className="auth-links">
         <Link href="/esqueci-senha">Esqueci minha senha</Link>
       </p>
-      <p style={{ textAlign: "center", fontSize: "0.9rem" }}>
+      <p className="auth-links">
         Ainda não tem conta? <Link href="/signup">Criar conta</Link>
       </p>
     </form>

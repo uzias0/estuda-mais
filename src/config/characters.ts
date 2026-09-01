@@ -37,6 +37,22 @@ export type CharacterExpression =
   | "confused"
   | "pointing";
 
+/**
+ * Traços visuais que tornam cada personagem reconhecível à distância (fase
+ * de redesign visual — antes todos os personagens usavam exatamente a
+ * mesma forma, só variando a cor de preenchimento, o que na prática lia
+ * como "uma carinha colorida genérica", nunca como Freud/Jung/etc.
+ * distintos). Continua um traço 100% geométrico/flat, nunca um retrato
+ * real — só um punhado de formas a mais (cabelo, óculos, barba) compostas
+ * pelo mesmo `CharacterAvatar`, sem imagem nova por personagem.
+ */
+export interface CharacterFeatures {
+  hair?: "bald" | "receding" | "side-part" | "short-neat" | "wavy";
+  hairColor?: string;
+  glasses?: "round" | "oval";
+  facialHair?: "full-beard" | "goatee" | "mustache";
+}
+
 export interface CharacterDef {
   id: string;
   name: string;
@@ -44,6 +60,7 @@ export interface CharacterDef {
   colorway: { skin: string; accent: string };
   /** Slug de `School` que este personagem representa, quando existir de verdade. */
   schoolSlug?: string;
+  features?: CharacterFeatures;
 }
 
 export const CHARACTERS: Record<string, CharacterDef> = {
@@ -59,6 +76,12 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     role: "psicanálise",
     colorway: { skin: "#c99a5b", accent: "#8a5a2b" },
     schoolSlug: "psicanalise",
+    features: {
+      hair: "receding",
+      hairColor: "#d8d3c8",
+      glasses: "round",
+      facialHair: "full-beard",
+    },
   },
   jung: {
     id: "jung",
@@ -66,6 +89,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     role: "psicologia analítica",
     colorway: { skin: "#7fa6c9", accent: "#3d6690" },
     schoolSlug: "psicologia-analitica",
+    features: { hair: "side-part", hairColor: "#5a4632", glasses: "oval", facialHair: "goatee" },
   },
   skinner: {
     id: "skinner",
@@ -73,6 +97,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     role: "behaviorismo",
     colorway: { skin: "#7fbf8f", accent: "#2e7d4f" },
     schoolSlug: "behaviorismo",
+    features: { hair: "short-neat", hairColor: "#2e2620" },
   },
   piaget: {
     id: "piaget",
@@ -80,6 +105,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     role: "psicologia do desenvolvimento",
     colorway: { skin: "#e0a458", accent: "#b5651d" },
     schoolSlug: "psicologia-do-desenvolvimento",
+    features: { hair: "bald", hairColor: "#e6e2da", glasses: "round" },
   },
   rogers: {
     id: "rogers",
@@ -87,6 +113,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     role: "humanismo",
     colorway: { skin: "#e08fa0", accent: "#c4536b" },
     schoolSlug: "humanismo",
+    features: { hair: "wavy", hairColor: "#dcdad4" },
   },
   bandura: {
     id: "bandura",
@@ -94,6 +121,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     role: "aprendizagem social",
     colorway: { skin: "#a68fe0", accent: "#6c4bb5" },
     schoolSlug: "aprendizagem-social",
+    features: { hair: "side-part", hairColor: "#3a2f26", facialHair: "mustache" },
   },
 };
 

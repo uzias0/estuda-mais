@@ -11,11 +11,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   const [state, formAction, pending] = useActionState(resetPasswordAction, initialState);
 
   return (
-    <form
-      action={formAction}
-      className="card stack fade-in-up"
-      style={{ maxWidth: 420, margin: "0 auto" }}
-    >
+    <form action={formAction} className="card auth-card stack fade-in-up">
       <input type="hidden" name="token" value={token} />
       <div className="field">
         <label htmlFor="password">Nova senha</label>
@@ -38,7 +34,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? "Salvando…" : "Redefinir senha"}
       </button>
-      <p style={{ textAlign: "center", fontSize: "0.9rem" }}>
+      <p className="auth-links">
         <Link href="/login">Voltar para o login</Link>
       </p>
     </form>
