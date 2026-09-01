@@ -707,6 +707,11 @@ export async function cleanupFixtures(ids: {
     await prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: { in: ids.userIds } } });
     await prisma.passwordResetToken.deleteMany({ where: { userId: { in: ids.userIds } } });
     await prisma.contentAuditLog.deleteMany({ where: { actorUserId: { in: ids.userIds } } });
+    // Profile (1:1, sem cascade) — precisa cair antes do usuário, mesma
+    // razão das tabelas acima. Achado real: faltava aqui (alguns arquivos
+    // de teste vinham deletando Profile manualmente no próprio afterAll,
+    // por fora desta função, até este ponto ser exercitado de verdade).
+    await prisma.profile.deleteMany({ where: { userId: { in: ids.userIds } } });
     await prisma.user.deleteMany({ where: { id: { in: ids.userIds } } });
   }
 }

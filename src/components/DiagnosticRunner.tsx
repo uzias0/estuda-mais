@@ -6,6 +6,12 @@
  * estado local para navegar entre as questões já carregadas; toda
  * correção/cálculo acontece nas Server Actions (`diagnostic-actions.ts`),
  * que só delegam ao Módulo 3 — nada é recalculado aqui.
+ *
+ * Fase "diagnóstico antes do cadastro": `actions`/`onFinished` são
+ * parametrizáveis (com os valores de sempre como padrão) para o MESMO
+ * componente também rodar o diagnóstico ANÔNIMO (`/comecar`, ver
+ * `anonymous-diagnostic-actions.ts`) — sem duplicar toda essa lógica de
+ * fases num segundo componente.
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,7 +31,31 @@ import { now } from "@/lib/time";
 
 type Phase = "intro" | "loading" | "question" | "feedback" | "error";
 
-export function DiagnosticRunner() {
+export interface DiagnosticRunnerActions {
+  start: () => Promise<{ sessionId: string; questions: PublicQuestionViewLike[] }>;
+  submitAnswer: (input: {
+    sessionId: string;
+    questionId: string;
+    answerData: AttemptAnswerData;
+    timeSpentMs: number;
+  }) => Promise<{ isCorrect: boolean; explanation: string | null }>;
+  finish: (sessionId: string) => Promise<unknown>;
+}
+
+const DEFAULT_ACTIONS: DiagnosticRunnerActions = {
+  start: startDiagnosticAction,
+  submitAnswer: submitDiagnosticAnswerAction,
+  finish: finishDiagnosticAction,
+};
+
+export function DiagnosticRunner({
+  actions = DEFAULT_ACTIONS,
+  onFinished,
+}: {
+  actions?: DiagnosticRunnerActions;
+  /** Padrão: navega para a página de resultado autenticada. Passe para redirecionar para outro lugar (ex.: resultado anônimo). */
+  onFinished?: (sessionId: string) => void;
+} = {}) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("intro");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -40,7 +70,7 @@ export function DiagnosticRunner() {
   async function handleStart() {
     setPhase("loading");
     try {
-      const result = await startDiagnosticAction();
+      const result = await actions.start();
       setSessionId(result.sessionId);
       setQuestions(result.questions);
       setIndex(0);
@@ -56,7 +86,7 @@ export function DiagnosticRunner() {
     const question = questions[index];
     setPhase("loading");
     try {
-      const result = await submitDiagnosticAnswerAction({
+      const result = await actions.submitAnswer({
         sessionId,
         questionId: question.id,
         answerData,
@@ -80,8 +110,9 @@ export function DiagnosticRunner() {
     }
     setPhase("loading");
     try {
-      await finishDiagnosticAction(sessionId);
-      router.push(`/dashboard/diagnostico/resultado?sessionId=${sessionId}`);
+      await actions.finish(sessionId);
+      if (onFinished) onFinished(sessionId);
+      else router.push(`/dashboard/diagnostico/resultado?sessionId=${sessionId}`);
     } catch {
       setPhase("error");
     }

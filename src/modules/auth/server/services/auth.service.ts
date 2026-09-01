@@ -18,6 +18,7 @@ import { createSession } from "@/server/auth/session";
 import { consumeRateLimit, RateLimitError } from "@/server/auth/rate-limit";
 import { verifyTotpCode } from "@/server/auth/totp";
 import { consumeRecoveryCode } from "@/modules/auth/server/services/two-factor.service";
+import { isAnonymousEmail } from "@/server/auth/anonymous-session";
 import {
   SignUpInputSchema,
   SignInInputSchema,
@@ -65,8 +66,52 @@ export interface SignInTwoFactorRequired {
 
 export type SignInOutcome = ({ requiresTwoFactor: false } & AuthResult) | SignInTwoFactorRequired;
 
-/** Cadastra um novo usuário — sempre `Role.STUDENT`, sempre com senha com hash real. */
-export async function signUp(input: SignUpInput): Promise<AuthResult> {
+/**
+ * Reatribui o diagnóstico feito ANONIMAMENTE (`anonymous-session.ts`,
+ * fase "diagnóstico antes do cadastro") para a conta real recém-criada —
+ * só `StudySession`/`QuestionAttempt` precisam mudar de dono: o
+ * "resultado" nunca é uma entidade persistida à parte (é sempre
+ * recalculado a partir desses dois, ver `diagnostic.service.ts`), então
+ * não há mais nada para copiar. Verifica que o id realmente pertence a um
+ * usuário ANÔNIMO antes de mexer em qualquer coisa — nunca reatribui
+ * dados de um usuário real por engano (ex.: um cookie forjado/antigo
+ * apontando pra outra conta).
+ */
+async function reassignAnonymousDiagnostic(
+  anonymousUserId: string,
+  realUserId: string,
+): Promise<void> {
+  const anon = await prisma.user.findUnique({ where: { id: anonymousUserId } });
+  if (!anon || !isAnonymousEmail(anon.email)) return;
+
+  await prisma.$transaction([
+    prisma.studySession.updateMany({
+      where: { userId: anonymousUserId },
+      data: { userId: realUserId },
+    }),
+    prisma.questionAttempt.updateMany({
+      where: { userId: anonymousUserId },
+      data: { userId: realUserId },
+    }),
+  ]);
+
+  // O usuário anônimo nunca acumula mais que isso (nenhuma gamificação é
+  // processada pro diagnóstico anônimo, de propósito — ver
+  // `anonymous-diagnostic-actions.ts`) — seguro apagar de vez.
+  await prisma.profile.deleteMany({ where: { userId: anonymousUserId } });
+  await prisma.user.delete({ where: { id: anonymousUserId } }).catch(() => {});
+}
+
+/**
+ * Cadastra um novo usuário — sempre `Role.STUDENT`, sempre com senha com
+ * hash real. `anonymousUserId` (opcional) vem de quem chama
+ * (`signUpAction`, que lê o cookie anônimo) — quando presente e válido,
+ * herda o diagnóstico que o visitante já tinha feito antes de se cadastrar.
+ */
+export async function signUp(
+  input: SignUpInput,
+  anonymousUserId?: string | null,
+): Promise<AuthResult> {
   const data = SignUpInputSchema.parse(input);
 
   try {
@@ -90,6 +135,10 @@ export async function signUp(input: SignUpInput): Promise<AuthResult> {
       profile: { create: { name: data.name } },
     },
   });
+
+  if (anonymousUserId && anonymousUserId !== user.id) {
+    await reassignAnonymousDiagnostic(anonymousUserId, user.id);
+  }
 
   const session = await createSession(user.id);
   return {

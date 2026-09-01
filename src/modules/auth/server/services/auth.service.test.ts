@@ -12,12 +12,70 @@ import { signUp, signIn, completeTwoFactorSignIn, AuthError } from "./auth.servi
 import { beginTwoFactorSetup, confirmTwoFactorSetup } from "./two-factor.service";
 import { generateTotpCode } from "@/server/auth/totp";
 import { __resetRateLimits } from "@/server/auth/rate-limit";
-import { createFixtureUser } from "@/test/fixtures";
+import {
+  createFixtureUser,
+  createFixtureSource,
+  createFixtureMultipleChoiceQuestion,
+  createFixtureQuestionKnowledgeTag,
+  createFixtureConcept,
+  cleanupFixtures,
+} from "@/test/fixtures";
 import { hashPassword } from "@/server/auth/password";
+import { ANONYMOUS_EMAIL_DOMAIN } from "@/server/auth/anonymous-session";
+import {
+  startDiagnostic,
+  submitDiagnosticAnswer,
+  finishDiagnostic,
+} from "@/modules/assessment/server/services/diagnostic.service";
+
+/**
+ * Monta um `answerData` válido para QUALQUER um dos 8 `QuestionType`
+ * suportados — `startDiagnostic` sorteia do pool GLOBAL de questões
+ * publicadas/tagueadas (que inclui todo o conteúdo acadêmico real
+ * povoado neste projeto, não só a fixture MULTIPLE_CHOICE deste teste) —
+ * mesmo helper já usado em `gamification-events.service.test.ts`.
+ */
+async function anyValidAnswerDataFor(questionId: string): Promise<Record<string, unknown>> {
+  const question = await prisma.question.findUniqueOrThrow({
+    where: { id: questionId },
+    include: { options: true },
+  });
+  switch (question.type) {
+    case "MULTIPLE_CHOICE":
+    case "TRUE_FALSE":
+    case "CASE_STUDY":
+      return { type: question.type, selectedOptionId: question.options[0].id };
+    case "MULTI_SELECT":
+      return { type: "MULTI_SELECT", selectedOptionIds: [question.options[0].id] };
+    case "ORDERING":
+      return {
+        type: "ORDERING",
+        orderedOptionIds: [...question.options].sort((a, b) => a.order - b.order).map((o) => o.id),
+      };
+    case "MATCHING": {
+      const answerKey = question.answerKey as { pairs: Array<{ left: string; right: string }> };
+      return { type: "MATCHING", pairs: answerKey.pairs };
+    }
+    case "FILL_BLANK": {
+      const answerKey = question.answerKey as { blanks: Array<{ accepted: string[] }> };
+      return { type: "FILL_BLANK", answers: answerKey.blanks.map((b) => b.accepted[0]) };
+    }
+    case "SHORT_ANSWER": {
+      const answerKey = question.answerKey as { accepted: string[] };
+      return { type: "SHORT_ANSWER", text: answerKey.accepted[0] };
+    }
+    default:
+      throw new Error(`Tipo de questão não suportado no teste: "${question.type}".`);
+  }
+}
 
 describe("auth.service", () => {
   const userIds: string[] = [];
   const sessionIds: string[] = [];
+  const sourceIds: string[] = [];
+  const conceptIds: string[] = [];
+  const questionIds: string[] = [];
+  const studySessionIdsForCleanup: string[] = [];
   const email = `test-fixture-auth-${Date.now()}@example.invalid`;
 
   it("signUp cria um usuário real, sempre STUDENT, com senha com hash (nunca em texto puro)", async () => {
@@ -139,6 +197,96 @@ describe("auth.service", () => {
     expect(completed.actor.userId).toBe(user.id);
   });
 
+  it("signUp com anonymousUserId herda o diagnóstico feito antes do cadastro (StudySession/QuestionAttempt reatribuídos) e apaga o usuário anônimo", async () => {
+    const source = await createFixtureSource("anon-diag");
+    sourceIds.push(source.id);
+    const concept = await createFixtureConcept("anon-diag");
+    conceptIds.push(concept.id);
+    const question = await createFixtureMultipleChoiceQuestion("anon-diag", source.id, {
+      correctIndex: 0,
+    });
+    questionIds.push(question.id);
+    await createFixtureQuestionKnowledgeTag(question.id, "CONCEPT", concept.id);
+    const correctOptionId = question.options.find((o) => o.isCorrect)!.id;
+
+    // Simula o usuário anônimo real (mesmo padrão de e-mail de
+    // `anonymous-session.ts`) fazendo o diagnóstico ANTES de existir conta.
+    const anon = await prisma.user.create({
+      data: {
+        email: `anon-test-${Date.now()}@${ANONYMOUS_EMAIL_DOMAIN}`,
+        role: Role.STUDENT,
+        profile: { create: { name: "Visitante" } },
+      },
+    });
+    const anonActor = { userId: anon.id, role: Role.STUDENT };
+
+    const { sessionId, questions } = await startDiagnostic(anonActor, 1);
+    studySessionIdsForCleanup.push(sessionId);
+    expect(questions.length).toBeGreaterThan(0);
+    const answerData =
+      questions[0].id === question.id
+        ? { type: "MULTIPLE_CHOICE", selectedOptionId: correctOptionId }
+        : await anyValidAnswerDataFor(questions[0].id);
+    await submitDiagnosticAnswer(anonActor, {
+      sessionId,
+      questionId: questions[0].id,
+      answerData: answerData as never,
+      timeSpentMs: 100,
+    });
+    await finishDiagnostic(anonActor, sessionId);
+
+    const newEmail = `test-fixture-auth-anon-signup-${Date.now()}@example.invalid`;
+    const signUpResult = await signUp(
+      { email: newEmail, password: "SenhaForte123!", name: "TEST_FIXTURE Herdou Diagnóstico" },
+      anon.id,
+    );
+    userIds.push(signUpResult.actor.userId);
+    sessionIds.push(signUpResult.sessionId);
+
+    // A StudySession/QuestionAttempt do diagnóstico agora pertencem à conta REAL.
+    const session = await prisma.studySession.findUniqueOrThrow({ where: { id: sessionId } });
+    expect(session.userId).toBe(signUpResult.actor.userId);
+    const attempts = await prisma.questionAttempt.findMany({ where: { sessionId } });
+    expect(attempts.length).toBeGreaterThan(0);
+    attempts.forEach((a) => expect(a.userId).toBe(signUpResult.actor.userId));
+
+    // O usuário anônimo temporário foi apagado — não sobra lixo.
+    expect(await prisma.user.findUnique({ where: { id: anon.id } })).toBeNull();
+  });
+
+  it("signUp SEM anonymousUserId (cadastro direto) continua funcionando exatamente como antes", async () => {
+    const email = `test-fixture-auth-no-anon-${Date.now()}@example.invalid`;
+    const result = await signUp({ email, password: "SenhaForte123!", name: "TEST_FIXTURE Direto" });
+    userIds.push(result.actor.userId);
+    sessionIds.push(result.sessionId);
+    expect(result.actor.role).toBe(Role.STUDENT);
+  });
+
+  it("signUp com um anonymousUserId que NÃO é anônimo de verdade (e-mail real) ignora — nunca reatribui dados de outro usuário real", async () => {
+    const realOther = await createFixtureUser("auth-not-anon", Role.STUDENT);
+    userIds.push(realOther.id);
+    const otherSession = await prisma.studySession.create({
+      data: { userId: realOther.id, mode: "FORMACAO" },
+    });
+    studySessionIdsForCleanup.push(otherSession.id);
+
+    const email = `test-fixture-auth-fake-anon-${Date.now()}@example.invalid`;
+    const result = await signUp(
+      { email, password: "SenhaForte123!", name: "TEST_FIXTURE Fake Anon" },
+      realOther.id, // forjado — NÃO é um usuário anônimo de verdade.
+    );
+    userIds.push(result.actor.userId);
+    sessionIds.push(result.sessionId);
+
+    // A sessão do OUTRO usuário real continua com ele — nada foi roubado.
+    const stillOwned = await prisma.studySession.findUniqueOrThrow({
+      where: { id: otherSession.id },
+    });
+    expect(stillOwned.userId).toBe(realOther.id);
+    // E o "outro usuário real" (forjado como anônimo) NÃO foi apagado.
+    expect(await prisma.user.findUnique({ where: { id: realOther.id } })).not.toBeNull();
+  });
+
   it("signIn bloqueia após exceder o limite de tentativas para o mesmo e-mail (rate limiting)", async () => {
     __resetRateLimits();
     const target = `test-fixture-auth-ratelimit-${Date.now()}@example.invalid`;
@@ -159,12 +307,13 @@ describe("auth.service", () => {
   afterAll(async () => {
     if (sessionIds.length)
       await prisma.authSession.deleteMany({ where: { id: { in: sessionIds } } });
-    if (userIds.length) {
-      await prisma.twoFactorChallenge.deleteMany({ where: { userId: { in: userIds } } });
-      await prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: { in: userIds } } });
-      await prisma.profile.deleteMany({ where: { userId: { in: userIds } } });
-      await prisma.user.deleteMany({ where: { id: { in: userIds } } });
-    }
+    await cleanupFixtures({
+      studySessionIds: studySessionIdsForCleanup,
+      questionIds,
+      conceptIds,
+      sourceIds,
+      userIds,
+    });
     await prisma.$disconnect();
   });
 });

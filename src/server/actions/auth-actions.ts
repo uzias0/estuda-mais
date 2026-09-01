@@ -37,6 +37,7 @@ import {
   getCurrentSessionId,
   destroySession,
 } from "@/server/auth/session";
+import { getAnonymousUserId, clearAnonymousSession } from "@/server/auth/anonymous-session";
 
 export interface AuthActionResult {
   error?: string;
@@ -47,12 +48,22 @@ export async function signUpAction(
   formData: FormData,
 ): Promise<AuthActionResult> {
   try {
-    const result = await signUp({
-      email: String(formData.get("email") ?? ""),
-      password: String(formData.get("password") ?? ""),
-      name: String(formData.get("name") ?? ""),
-    });
+    // Fase "diagnóstico antes do cadastro" — se o visitante já fez o
+    // diagnóstico anônimo (`/comecar`), herda esse resultado na conta
+    // que está sendo criada agora (ver `reassignAnonymousDiagnostic`,
+    // `auth.service.ts`). `undefined` quando nunca passou por lá —
+    // cadastro direto continua funcionando exatamente como antes.
+    const anonymousUserId = await getAnonymousUserId();
+    const result = await signUp(
+      {
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+        name: String(formData.get("name") ?? ""),
+      },
+      anonymousUserId,
+    );
     await setSessionCookie(result.sessionId, result.expiresAt);
+    if (anonymousUserId) await clearAnonymousSession();
   } catch (e) {
     if (e instanceof AuthError) return { error: e.message };
     if (e && typeof e === "object" && "issues" in e) {
