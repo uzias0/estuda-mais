@@ -18,7 +18,7 @@
  * nunca aqui.
  */
 import Link from "next/link";
-import { Brain, Bell, LogOut } from "lucide-react";
+import { Brain, Bell, LogOut, Flame, Star, Heart, Gem } from "lucide-react";
 import { signOutAction } from "@/server/actions/auth-actions";
 import { requireSessionActor } from "@/server/auth/session";
 import { getHeartsState } from "@/modules/gamification/server/services/hearts.service";
@@ -56,24 +56,38 @@ export async function Header() {
           title={`${streak.currentStreak} dia(s) de sequência`}
           aria-label={`${streak.currentStreak} dia(s) de sequência`}
         >
-          🔥 {formatInteger(streak.currentStreak)}
+          <Flame
+            size={14}
+            color="var(--color-streak)"
+            fill="var(--color-streak)"
+            aria-hidden="true"
+          />{" "}
+          {formatInteger(streak.currentStreak)}
         </span>
         <span className="badge badge-muted" title={`${totalXp} XP`} aria-label={`${totalXp} XP`}>
-          ⭐ {formatInteger(totalXp)}
+          <Star size={14} color="var(--color-xp)" fill="var(--color-xp)" aria-hidden="true" />{" "}
+          {formatInteger(totalXp)}
         </span>
         <span
           className="badge badge-muted"
           title={`${hearts.current} de ${hearts.max} baterias`}
           aria-label={`${hearts.current} de ${hearts.max} baterias`}
         >
-          ❤️ {formatInteger(hearts.current)}
+          <Heart
+            size={14}
+            color="var(--color-heart)"
+            fill="var(--color-heart)"
+            aria-hidden="true"
+          />{" "}
+          {formatInteger(hearts.current)}
         </span>
         <span
           className="badge badge-muted"
           title={`${gemBalance} joia(s)`}
           aria-label={`${gemBalance} joia(s)`}
         >
-          💎 {formatInteger(gemBalance)}
+          <Gem size={14} color="var(--color-gem)" fill="var(--color-gem)" aria-hidden="true" />{" "}
+          {formatInteger(gemBalance)}
         </span>
       </div>
       <div className="app-header-actions">

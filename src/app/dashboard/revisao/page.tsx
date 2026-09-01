@@ -9,6 +9,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { AlertCircle } from "lucide-react";
 import { requireSessionActor } from "@/server/auth/session";
 import { getReviewQueue } from "@/modules/review/server/services/reviewQueue.service";
 import { resolveConceptNames } from "@/lib/resolve-names";
@@ -46,7 +47,11 @@ export default async function RevisaoPage() {
 
       {overdue.length > 0 ? (
         <div className="row-wrap">
-          <Badge tone="danger">🔴 {overdue.length} revisão(ões) atrasada(s)</Badge>
+          <Badge tone="danger">
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <AlertCircle size={13} aria-hidden="true" /> {overdue.length} revisão(ões) atrasada(s)
+            </span>
+          </Badge>
         </div>
       ) : null}
 

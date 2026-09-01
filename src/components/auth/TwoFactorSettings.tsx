@@ -15,6 +15,7 @@
  *     recuperação em texto puro UMA ÚNICA VEZ (nunca recuperáveis depois).
  */
 import { useActionState, useState } from "react";
+import { ShieldCheck } from "lucide-react";
 import {
   beginTwoFactorSetupAction,
   confirmTwoFactorSetupAction,
@@ -77,7 +78,10 @@ export function TwoFactorSettings({ initialEnabled }: { initialEnabled: boolean 
   if (phase === "recovery-codes") {
     return (
       <section className="card stack">
-        <p className="card-title">Dois fatores ativado ✅</p>
+        <p className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <ShieldCheck size={16} color="var(--color-success)" aria-hidden="true" />
+          Dois fatores ativado
+        </p>
         <p style={{ fontWeight: 700, color: "var(--color-danger)" }}>
           Guarde estes 10 códigos de recuperação agora — eles NÃO aparecem de novo depois desta
           tela. Use um deles se perder acesso ao seu app autenticador.

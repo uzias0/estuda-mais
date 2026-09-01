@@ -39,6 +39,13 @@
   /* Gamificação */
   --color-xp: #7c4dff;
   --color-streak: #ff7a3d;
+  /* Fase "tirar emoji" (pedido do usuário: "esses emoji está muito
+   * artificial... crie algo mais real") — bateria e joia ganham cor
+   * própria, mesmo padrão de XP/streak, para os ícones (lucide-react,
+   * mesma biblioteca já usada em `nav-items.ts` desde a fase de redesign
+   * profundo) terem uma identidade visual clara, não um emoji solto. */
+  --color-heart: #ff5c7a;
+  --color-gem: #22c3d6;
 
   --radius-sm: 8px;
   --radius-md: 14px;

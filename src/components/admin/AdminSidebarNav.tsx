@@ -24,6 +24,7 @@ export function AdminSidebarNav() {
       <ul className="sidebar-nav-list">
         {ADMIN_NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href);
+          const Icon = item.icon;
           return (
             <li key={item.href}>
               <Link
@@ -32,7 +33,7 @@ export function AdminSidebarNav() {
                 data-active={active ? "true" : undefined}
                 aria-current={active ? "page" : undefined}
               >
-                <span aria-hidden="true">{item.icon}</span>
+                <Icon aria-hidden="true" size={20} strokeWidth={2.25} />
                 <span>{item.label}</span>
               </Link>
             </li>
@@ -49,6 +50,7 @@ export function AdminMobileNav() {
     <nav className="admin-mobile-nav" aria-label="Navegação administrativa (telas menores)">
       {ADMIN_NAV_ITEMS.map((item) => {
         const active = isActive(pathname, item.href);
+        const Icon = item.icon;
         return (
           <Link
             key={item.href}
@@ -56,7 +58,7 @@ export function AdminMobileNav() {
             data-active={active ? "true" : undefined}
             aria-current={active ? "page" : undefined}
           >
-            <span aria-hidden="true">{item.icon}</span> {item.label}
+            <Icon aria-hidden="true" size={18} strokeWidth={2.25} /> {item.label}
           </Link>
         );
       })}

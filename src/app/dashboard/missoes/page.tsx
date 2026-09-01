@@ -6,16 +6,17 @@
  */
 export const dynamic = "force-dynamic";
 
+import { BookOpen, CheckCircle2, Star, CalendarDays, Target, Gem } from "lucide-react";
 import { requireSessionActor } from "@/server/auth/session";
 import { getWeeklyMissionsStatus } from "@/modules/gamification/server/services/weekly-missions.service";
 import { ProgressBar } from "@/components/ProgressBar";
 import { formatInteger } from "@/lib/format";
 
-const MISSION_ICON: Record<string, string> = {
-  LESSONS_COMPLETED_WEEK: "📚",
-  QUESTIONS_CORRECT_WEEK: "✅",
-  XP_EARNED_WEEK: "⭐",
-  DAYS_STUDIED_WEEK: "🗓️",
+const MISSION_ICON: Record<string, typeof BookOpen> = {
+  LESSONS_COMPLETED_WEEK: BookOpen,
+  QUESTIONS_CORRECT_WEEK: CheckCircle2,
+  XP_EARNED_WEEK: Star,
+  DAYS_STUDIED_WEEK: CalendarDays,
 };
 
 function formatDaysRemaining(weekEndsAt: Date): string {
@@ -38,25 +39,55 @@ export default async function MissoesPage() {
       </div>
 
       <div className="stack">
-        {missions.map(({ mission, current, target, met, progressPercentage, rewarded }) => (
-          <div key={mission.id} className={`card stack ${met ? "achievement-card--unlocked" : ""}`}>
-            <div className="row-wrap" style={{ justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 700 }}>
-                {MISSION_ICON[mission.type] ?? "🎯"} {mission.title}
-              </span>
-              {met ? <span className="badge badge-success">Concluída ✅</span> : null}
+        {missions.map(({ mission, current, target, met, progressPercentage, rewarded }) => {
+          const MissionIcon = MISSION_ICON[mission.type] ?? Target;
+          return (
+            <div
+              key={mission.id}
+              className={`card stack ${met ? "achievement-card--unlocked" : ""}`}
+            >
+              <div className="row-wrap" style={{ justifyContent: "space-between" }}>
+                <span
+                  style={{ fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  <MissionIcon size={18} color="var(--color-brand)" aria-hidden="true" />{" "}
+                  {mission.title}
+                </span>
+                {met ? (
+                  <span
+                    className="badge badge-success"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                  >
+                    Concluída <CheckCircle2 size={14} aria-hidden="true" />
+                  </span>
+                ) : null}
+              </div>
+              <ProgressBar
+                value={progressPercentage}
+                label={`${formatInteger(Math.min(current, target))} / ${formatInteger(target)}`}
+                tone={met ? "success" : "brand"}
+              />
+              <p
+                style={{
+                  color: "var(--color-text-muted)",
+                  fontSize: "0.85rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                Recompensa: +{mission.xpReward} XP · +{mission.gemReward}{" "}
+                <Gem
+                  size={14}
+                  color="var(--color-gem)"
+                  fill="var(--color-gem)"
+                  aria-hidden="true"
+                />
+                {rewarded ? " — já creditada" : ""}
+              </p>
             </div>
-            <ProgressBar
-              value={progressPercentage}
-              label={`${formatInteger(Math.min(current, target))} / ${formatInteger(target)}`}
-              tone={met ? "success" : "brand"}
-            />
-            <p style={{ color: "var(--color-text-muted)", fontSize: "0.85rem" }}>
-              Recompensa: +{mission.xpReward} XP · +{mission.gemReward} 💎
-              {rewarded ? " — já creditada" : ""}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

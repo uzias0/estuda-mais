@@ -9,6 +9,7 @@
  */
 export const dynamic = "force-dynamic";
 
+import { Trophy, Lock } from "lucide-react";
 import { requireSessionActor } from "@/server/auth/session";
 import { getGamificationSummary } from "@/modules/gamification/server/services/gamification-summary.service";
 import { listAchievementsForUser } from "@/modules/gamification/server/services/achievement.service";
@@ -68,7 +69,11 @@ export default async function ConquistasPage() {
                 key={achievement.id}
                 className="card card--tight achievement-card--unlocked fade-in-up"
               >
-                <Badge tone="success">🏆 Desbloqueada</Badge>
+                <Badge tone="success">
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <Trophy size={13} aria-hidden="true" /> Desbloqueada
+                  </span>
+                </Badge>
                 <p style={{ marginTop: 10, fontWeight: 700 }}>{achievement.name}</p>
                 <p style={{ color: "var(--color-text-muted)", marginTop: 4, fontSize: "0.85rem" }}>
                   {achievement.description}
@@ -92,7 +97,11 @@ export default async function ConquistasPage() {
           <div className="grid-cards">
             {achievements.upcoming.map(({ achievement, evaluation }) => (
               <div key={achievement.id} className="card card--tight achievement-card--locked">
-                <Badge tone="muted">🔒 Bloqueada</Badge>
+                <Badge tone="muted">
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <Lock size={13} aria-hidden="true" /> Bloqueada
+                  </span>
+                </Badge>
                 <p style={{ marginTop: 10, fontWeight: 700 }}>{achievement.name}</p>
                 <p style={{ color: "var(--color-text-muted)", marginTop: 4, fontSize: "0.85rem" }}>
                   {achievement.description}

@@ -16,6 +16,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { Flame, Star, Heart, Gem } from "lucide-react";
 import { DiagnosticRunner } from "./DiagnosticRunner";
 import { CharacterMessage } from "./characters/CharacterMessage";
 import { NEUTRAL_CHARACTER } from "@/config/characters";
@@ -28,15 +29,27 @@ import {
 type Phase = "welcome" | "tutorial" | "diagnostic";
 
 const TUTORIAL_ITEMS = [
-  { icon: "🔥", title: "Sequência", text: "Quantos dias seguidos você estuda sem parar." },
-  { icon: "⭐", title: "XP", text: "Pontos de experiência — sobe de nível conforme você estuda." },
   {
-    icon: "❤️",
+    Icon: Flame,
+    color: "var(--color-streak)",
+    title: "Sequência",
+    text: "Quantos dias seguidos você estuda sem parar.",
+  },
+  {
+    Icon: Star,
+    color: "var(--color-xp)",
+    title: "XP",
+    text: "Pontos de experiência — sobe de nível conforme você estuda.",
+  },
+  {
+    Icon: Heart,
+    color: "var(--color-heart)",
     title: "Baterias",
     text: "Sua energia pra responder questões — erra, gasta; recarrega sozinha com o tempo.",
   },
   {
-    icon: "💎",
+    Icon: Gem,
+    color: "var(--color-gem)",
     title: "Joias",
     text: "Sua moeda — ganha completando lições e missões, usa pra recarregar bateria.",
   },
@@ -72,7 +85,7 @@ export function ComecarFlow() {
         <div className="grid-cards">
           {TUTORIAL_ITEMS.map((item) => (
             <div key={item.title} className="card card--tight">
-              <p style={{ fontSize: "1.6rem" }}>{item.icon}</p>
+              <item.Icon size={28} color={item.color} fill={item.color} aria-hidden="true" />
               <p style={{ fontWeight: 700, marginTop: 6 }}>{item.title}</p>
               <p style={{ color: "var(--color-text-muted)", fontSize: "0.85rem", marginTop: 4 }}>
                 {item.text}

@@ -11,6 +11,7 @@
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { HeartCrack, Heart, Gem } from "lucide-react";
 import type { AttemptAnswerData } from "@/modules/assessment/types/question-attempt.schema";
 import {
   startLessonAction,
@@ -209,15 +210,30 @@ export function LessonRunner({
     const canAfford = gemBalance >= GEM_COST_PER_HEART;
     return (
       <div className="card stack" style={{ textAlign: "center" }}>
-        <span style={{ fontSize: "2.5rem" }} aria-hidden="true">
-          💔
-        </span>
+        <HeartCrack
+          size={44}
+          color="var(--color-heart)"
+          strokeWidth={1.75}
+          aria-hidden="true"
+          style={{ alignSelf: "center" }}
+        />
         <h1 style={{ fontSize: "1.3rem", fontWeight: 800 }}>Você ficou sem baterias</h1>
         <p style={{ color: "var(--color-text-muted)" }}>
           Espere a recarga automática (1 bateria a cada 30 minutos) ou use joia para continuar agora
           mesmo.
         </p>
-        <p style={{ fontWeight: 700 }}>💎 Você tem {gemBalance} joia(s)</p>
+        <p
+          style={{
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          <Gem size={18} color="var(--color-gem)" fill="var(--color-gem)" aria-hidden="true" /> Você
+          tem {gemBalance} joia(s)
+        </p>
         {refillError ? (
           <p role="alert" style={{ color: "var(--color-danger)" }}>
             {refillError}
@@ -228,8 +244,16 @@ export function LessonRunner({
           className="btn btn-primary"
           disabled={!canAfford || refilling}
           onClick={handleRefillHearts}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
         >
-          {refilling ? "Recarregando…" : `Recarregar 1 bateria (${GEM_COST_PER_HEART} 💎)`}
+          {refilling ? (
+            "Recarregando…"
+          ) : (
+            <>
+              Recarregar 1 bateria ({GEM_COST_PER_HEART}{" "}
+              <Gem size={14} color="currentColor" fill="currentColor" aria-hidden="true" />)
+            </>
+          )}
         </button>
         <Link href="/dashboard" className="btn btn-secondary">
           Voltar ao início
@@ -306,9 +330,14 @@ export function LessonRunner({
               fontWeight: 800,
               color: "var(--color-brand)",
               textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
             }}
           >
-            +{gamification.gemsGrantedNow} 💎
+            +{gamification.gemsGrantedNow}{" "}
+            <Gem size={16} color="var(--color-gem)" fill="var(--color-gem)" aria-hidden="true" />
           </p>
         ) : null}
         {nextAction ? (
@@ -366,7 +395,13 @@ export function LessonRunner({
           title={`${hearts.current} de ${hearts.max} baterias`}
           aria-label={`${hearts.current} de ${hearts.max} baterias`}
         >
-          ❤️ {hearts.current}
+          <Heart
+            size={14}
+            color="var(--color-heart)"
+            fill="var(--color-heart)"
+            aria-hidden="true"
+          />{" "}
+          {hearts.current}
         </span>
       </div>
 

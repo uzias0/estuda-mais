@@ -14,13 +14,13 @@ export interface Reaction {
 }
 
 const CORRECT_MESSAGES = [
-  "Muito bem! 🎉",
+  "Muito bem!",
   "Isso aí! Você mandou bem.",
   "Perfeito, continue assim!",
   "Exatamente isso!",
   "Mandou muito bem nessa!",
   "Isso mesmo — você está pegando o jeito.",
-  "Na mosca! 🎯",
+  "Na mosca!",
   "Show de bola!",
 ];
 const INCORRECT_MESSAGES = [

@@ -5,16 +5,27 @@
  */
 export const dynamic = "force-dynamic";
 
+import { Medal, Gem, Crown, Trophy } from "lucide-react";
 import { requireSessionActor } from "@/server/auth/session";
 import { getWeeklyRanking } from "@/modules/gamification/server/services/weekly-ranking.service";
 import { formatInteger } from "@/lib/format";
 
-const DIVISION_ICON: Record<string, string> = {
-  bronze: "🥉",
-  prata: "🥈",
-  ouro: "🥇",
-  platina: "💠",
-  diamante: "💎",
+const DIVISION_ICON: Record<string, typeof Medal> = {
+  bronze: Medal,
+  prata: Medal,
+  ouro: Medal,
+  platina: Gem,
+  diamante: Crown,
+};
+
+/** Cor por divisão — mesmo espírito das medalhas reais (bronze/prata/ouro),
+ * platina e diamante ganham as cores já usadas em joia/destaque do app. */
+const DIVISION_COLOR: Record<string, string> = {
+  bronze: "#cd7f32",
+  prata: "#a8a8b3",
+  ouro: "#e8b923",
+  platina: "var(--color-gem)",
+  diamante: "var(--color-brand)",
 };
 
 function formatDaysRemaining(weekEndsAt: Date): string {
@@ -29,12 +40,23 @@ export default async function RankingPage() {
   const actor = await requireSessionActor();
   const { division, top, ownEntry, weekEndsAt, totalInDivision } = await getWeeklyRanking(actor);
   const ownEntryOutsideTop = ownEntry.rank > top.length;
+  const DivisionIcon = DIVISION_ICON[division.id] ?? Trophy;
+  const divisionColor = DIVISION_COLOR[division.id] ?? "var(--color-brand)";
 
   return (
     <div className="page-container stack">
       <div className="row-wrap" style={{ justifyContent: "space-between" }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 800 }}>
-          {DIVISION_ICON[division.id] ?? "🏆"} Divisão {division.name}
+        <h1
+          style={{
+            fontSize: "1.5rem",
+            fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <DivisionIcon size={24} color={divisionColor} fill={divisionColor} aria-hidden="true" />{" "}
+          Divisão {division.name}
         </h1>
         <span className="badge badge-muted">{formatDaysRemaining(weekEndsAt)}</span>
       </div>

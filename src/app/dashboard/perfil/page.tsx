@@ -14,6 +14,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { Trophy, BarChart3 } from "lucide-react";
 import { requireSessionActor } from "@/server/auth/session";
 import { prisma } from "@/server/db";
 import { getGamificationSummary } from "@/modules/gamification/server/services/gamification-summary.service";
@@ -66,7 +67,12 @@ export default async function PerfilPage() {
           className="card card--tight"
           style={{ textDecoration: "none" }}
         >
-          <p className="card-title">🏆 Conquistas</p>
+          <p
+            className="card-title"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <Trophy size={16} color="var(--color-brand)" aria-hidden="true" /> Conquistas
+          </p>
           <p style={{ marginTop: 8, fontWeight: 700 }}>Ver todas</p>
         </Link>
         <Link
@@ -74,7 +80,12 @@ export default async function PerfilPage() {
           className="card card--tight"
           style={{ textDecoration: "none" }}
         >
-          <p className="card-title">📊 Progresso</p>
+          <p
+            className="card-title"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <BarChart3 size={16} color="var(--color-brand)" aria-hidden="true" /> Progresso
+          </p>
           <p style={{ marginTop: 8, fontWeight: 700 }}>Ver evolução</p>
         </Link>
       </div>
