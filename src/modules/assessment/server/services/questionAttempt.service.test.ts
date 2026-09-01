@@ -125,6 +125,22 @@ describe("QuestionAttempt service", () => {
     expect(reloaded?.correctRate).toBeCloseTo(0.5, 5);
   });
 
+  it("context PRACTICE (fase de correção de bugs — tela Questões respondível) funciona SEM sessionId/simAttemptId nenhum", async () => {
+    const { attempt, isCorrect } = await recordAttempt(
+      { userId: studentId, role: Role.STUDENT },
+      {
+        questionId,
+        answerData: { type: "MULTIPLE_CHOICE", selectedOptionId: correctOptionId },
+        timeSpentMs: 800,
+        context: "PRACTICE",
+      },
+    );
+    expect(isCorrect).toBe(true);
+    expect(attempt.context).toBe("PRACTICE");
+    expect(attempt.sessionId).toBeNull();
+    expect(attempt.simAttemptId).toBeNull();
+  });
+
   it("aluno não consegue ler a tentativa de outro usuário (segurança)", async () => {
     const { attempt } = await recordAttempt(
       { userId: studentId, role: Role.STUDENT },

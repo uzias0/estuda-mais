@@ -6,7 +6,10 @@
  * (seção 49: "conteúdo DRAFT não aparece na experiência pública").
  */
 import { PublicationStatus } from "@/generated/prisma/enums";
-import { listQuestions } from "@/modules/assessment/server/services/questionQuery.service";
+import {
+  listQuestions,
+  toPublicQuestionView,
+} from "@/modules/assessment/server/services/questionQuery.service";
 import { listDisciplines } from "@/modules/knowledge/server/services/discipline.service";
 import {
   listExamBoards,
@@ -16,6 +19,7 @@ import {
 import { questionTypeLabel, difficultyLabel } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/Badge";
+import { PracticeQuestionCard } from "@/components/PracticeQuestionCard";
 
 const DIFFICULTIES = ["INICIANTE", "BASICO", "INTERMEDIARIO", "AVANCADO", "DOMINIO"];
 const TYPES = [
@@ -31,8 +35,16 @@ const TYPES = [
 
 export default async function QuestoesPage({ searchParams }: PageProps<"/dashboard/questoes">) {
   const params = await searchParams;
-  const str = (key: string) =>
-    typeof params[key] === "string" ? (params[key] as string) : undefined;
+  // Achado real (bug reportado pelo usuário): um <select> nativo SEM opção
+  // escolhida ainda envia `name=""` no GET (nunca omite o campo) — antes,
+  // essa string vazia ia direto pro Prisma como se fosse um valor de enum
+  // real (`difficulty: ""`), que o Postgres rejeita, derrubando a página
+  // inteira pro error.tsx genérico ("Não foi possível carregar seus
+  // estudos"). `str()` agora trata "" exatamente como "nenhum filtro".
+  const str = (key: string) => {
+    const value = params[key];
+    return typeof value === "string" && value !== "" ? value : undefined;
+  };
 
   const [questions, disciplines, examBoards, organizations, positions] = await Promise.all([
     listQuestions({
@@ -174,16 +186,11 @@ export default async function QuestoesPage({ searchParams }: PageProps<"/dashboa
       ) : (
         <div className="stack">
           {questions.map((question) => (
-            <div key={question.id} className="card card--tight">
-              <div className="row-wrap" style={{ justifyContent: "space-between" }}>
-                <Badge tone="muted">{questionTypeLabel(question.type)}</Badge>
-                <Badge tone="brand">{difficultyLabel(question.difficulty)}</Badge>
-                {question.examEdition ? (
-                  <Badge tone="warning">{question.examEdition.year}</Badge>
-                ) : null}
-              </div>
-              <p style={{ marginTop: 10 }}>{question.prompt}</p>
-            </div>
+            <PracticeQuestionCard
+              key={question.id}
+              question={toPublicQuestionView(question)}
+              examYear={question.examEdition?.year}
+            />
           ))}
         </div>
       )}

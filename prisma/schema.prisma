@@ -88,12 +88,18 @@ enum QuestionType {
 // DIAGNOSTIC adicionado no Módulo 3 (docs/MODULO-3.md, "Decisões técnicas") —
 // o diagnóstico inicial precisa distinguir suas tentativas das demais sem
 // string mágica; alteração aditiva, os 4 valores anteriores não mudam.
+//
+// PRACTICE adicionado na fase de correção de bugs (achado real do usuário:
+// a tela "Questões" listava questões sem NENHUMA forma de respondê-las) —
+// mesma alteração aditiva; identifica uma tentativa avulsa, fora de
+// lição/revisão/simulado/diagnóstico, sem precisar de nenhum sessionId.
 enum AttemptContext {
   LESSON
   REVIEW
   CHALLENGE
   SIMULATION
   DIAGNOSTIC
+  PRACTICE
 }
 
 enum Difficulty {
