@@ -22,6 +22,7 @@
     "db:seed-admin": "tsx scripts/bootstrap-admin.ts",
     "db:seed-academic": "tsx scripts/seed-academic-content.ts",
     "db:seed-academic-v2": "tsx scripts/seed-academic-content-v2.ts",
+    "db:fix-answer-length-bias": "tsx scripts/fix-answer-length-bias.ts",
     "cap:sync": "npx cap sync android",
     "android:open": "npx cap sync android && npx cap open android",
     "android:build": "node scripts/android-build.mjs",
