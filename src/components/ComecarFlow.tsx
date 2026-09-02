@@ -76,7 +76,7 @@ export function ComecarFlow() {
 
   if (phase === "tutorial") {
     return (
-      <div className="stack">
+      <div className="stack fade-in-up">
         <CharacterMessage
           character={NEUTRAL_CHARACTER}
           expression="encouraging"
@@ -105,7 +105,7 @@ export function ComecarFlow() {
   }
 
   return (
-    <div className="stack">
+    <div className="stack fade-in-up">
       <CharacterMessage
         character={NEUTRAL_CHARACTER}
         expression="happy"

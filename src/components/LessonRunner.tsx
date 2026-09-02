@@ -209,7 +209,7 @@ export function LessonRunner({
   if (phase === "hearts-exhausted") {
     const canAfford = gemBalance >= GEM_COST_PER_HEART;
     return (
-      <div className="card stack" style={{ textAlign: "center" }}>
+      <div className="card stack fade-in-up" style={{ textAlign: "center" }}>
         <HeartCrack
           size={44}
           color="var(--color-heart)"
@@ -264,7 +264,7 @@ export function LessonRunner({
 
   if (phase === "not-started") {
     return (
-      <div className="stack">
+      <div className="stack fade-in-up">
         <CharacterMessage
           character={character}
           expression={greeting.expression}
@@ -299,7 +299,7 @@ export function LessonRunner({
   if (phase === "completed" && completionResult) {
     const { completed, gamification, nextAction, wrongQuestions } = completionResult;
     return (
-      <div className="stack">
+      <div className="stack fade-in-up">
         <CharacterCelebration
           character={character}
           title={lessonCompleteReaction(completed.accuracy).message}
@@ -385,7 +385,7 @@ export function LessonRunner({
   if (!currentBlock) {
     // Todos os blocos concluídos, mas a lição ainda não foi finalizada.
     return (
-      <div className="stack">
+      <div className="stack fade-in-up">
         <ProgressBar
           value={session.percentage}
           label={`${session.blocksCompleted} de ${session.blocksTotal} blocos`}
@@ -430,56 +430,62 @@ export function LessonRunner({
         </span>
       </div>
 
-      {phase === "feedback" && feedback ? (
-        <>
-          {(() => {
-            const reaction = answerReaction(feedback.isCorrect);
-            return (
-              <CharacterMessage
-                character={character}
-                expression={reaction.expression}
-                message={reaction.message}
-              />
-            );
-          })()}
-          {feedback.isCorrect ? (
-            // "Porção de XP" (pedido do usuário) por questão certa — mesmo
-            // valor que `processLessonCompletionEvent` de fato credita ao
-            // concluir a lição (`XP_REWARDS.LESSON_QUESTION_CORRECT`,
-            // reaproveitado, não um número solto novo); só uma prévia
-            // visual imediata, o crédito real continua batendo na
-            // conclusão (Módulo 9), como já era.
-            <p
-              key={`${currentBlock.id}-xp-pop`}
-              className="xp-gain-pop"
-              style={{
-                fontSize: "1rem",
-                fontWeight: 800,
-                color: "var(--color-xp)",
-                textAlign: "center",
-              }}
-            >
-              +{XP_REWARDS.LESSON_QUESTION_CORRECT} XP
-            </p>
-          ) : null}
-          <QuestionFeedback isCorrect={feedback.isCorrect} explanation={feedback.explanation} />
-          <button type="button" className="btn btn-primary" onClick={handleContinueAfterFeedback}>
-            Continuar
-          </button>
-        </>
-      ) : currentBlock.type === "QUESTION" && currentBlock.question ? (
-        <QuestionRenderer question={currentBlock.question} onSubmit={handleAdvance} />
-      ) : (
-        <div className="card stack">
-          <span className="badge badge-muted" style={{ alignSelf: "flex-start" }}>
-            {blockTypeLabel(currentBlock.type)}
-          </span>
-          <p style={{ whiteSpace: "pre-wrap" }}>{currentBlock.content}</p>
-          <button type="button" className="btn btn-primary" onClick={() => handleAdvance()}>
-            Continuar
-          </button>
-        </div>
-      )}
+      {/* `key` muda a cada bloco E a cada troca bloco/feedback — força
+       * remontar (não só trocar o conteúdo do MESMO nó), o que replay a
+       * animação `fade-in-up` a cada transição (pedido do usuário: "está
+       * muito seco, adicione transições quando você vai de uma coisa pra
+       * outra"). */}
+      <div key={`${currentBlock.id}-${phase}`} className="stack fade-in-up">
+        {phase === "feedback" && feedback ? (
+          <>
+            {(() => {
+              const reaction = answerReaction(feedback.isCorrect);
+              return (
+                <CharacterMessage
+                  character={character}
+                  expression={reaction.expression}
+                  message={reaction.message}
+                />
+              );
+            })()}
+            {feedback.isCorrect ? (
+              // "Porção de XP" (pedido do usuário) por questão certa — mesmo
+              // valor que `processLessonCompletionEvent` de fato credita ao
+              // concluir a lição (`XP_REWARDS.LESSON_QUESTION_CORRECT`,
+              // reaproveitado, não um número solto novo); só uma prévia
+              // visual imediata, o crédito real continua batendo na
+              // conclusão (Módulo 9), como já era.
+              <p
+                className="xp-gain-pop"
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 800,
+                  color: "var(--color-xp)",
+                  textAlign: "center",
+                }}
+              >
+                +{XP_REWARDS.LESSON_QUESTION_CORRECT} XP
+              </p>
+            ) : null}
+            <QuestionFeedback isCorrect={feedback.isCorrect} explanation={feedback.explanation} />
+            <button type="button" className="btn btn-primary" onClick={handleContinueAfterFeedback}>
+              Continuar
+            </button>
+          </>
+        ) : currentBlock.type === "QUESTION" && currentBlock.question ? (
+          <QuestionRenderer question={currentBlock.question} onSubmit={handleAdvance} />
+        ) : (
+          <div className="card stack">
+            <span className="badge badge-muted" style={{ alignSelf: "flex-start" }}>
+              {blockTypeLabel(currentBlock.type)}
+            </span>
+            <p style={{ whiteSpace: "pre-wrap" }}>{currentBlock.content}</p>
+            <button type="button" className="btn btn-primary" onClick={() => handleAdvance()}>
+              Continuar
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

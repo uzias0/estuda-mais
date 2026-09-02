@@ -128,11 +128,18 @@ export async function completeTwoFactorSignInAction(
   redirect("/dashboard");
 }
 
+/**
+ * Fase "diagnóstico antes do cadastro": ao sair, volta para `/comecar`
+ * (boas-vindas → tutorial → diagnóstico), não `/login` — pedido do
+ * usuário: "quando eu clico pra sair... ele não volta pra tela lá do
+ * quiz, o inicial". `/comecar` já tem um link discreto "já tem conta?
+ * Entrar" para quem só quer logar de novo.
+ */
 export async function signOutAction(): Promise<void> {
   const sessionId = await getCurrentSessionId();
   if (sessionId) await destroySession(sessionId);
   await clearSessionCookie();
-  redirect("/login");
+  redirect("/comecar");
 }
 
 // ---- Autenticação de dois fatores (gestão — configurar/desativar) --------

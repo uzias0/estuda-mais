@@ -124,7 +124,7 @@ export function DiagnosticRunner({
 
   if (phase === "intro") {
     return (
-      <div className="card" style={{ textAlign: "center" }}>
+      <div className="card fade-in-up" style={{ textAlign: "center" }}>
         <p style={{ fontSize: "1.4rem", fontWeight: 800 }}>Bem-vindo à sua jornada de estudos!</p>
         <p
           style={{
@@ -165,26 +165,33 @@ export function DiagnosticRunner({
         value={((phase === "feedback" ? index + 1 : index) / questions.length) * 100}
         label={`Questão ${index + 1} de ${questions.length}`}
       />
-      {phase === "feedback" && feedback ? (
-        <>
-          {(() => {
-            const reaction = answerReaction(feedback.isCorrect);
-            return (
-              <CharacterMessage
-                character={NEUTRAL_CHARACTER}
-                expression={reaction.expression}
-                message={reaction.message}
-              />
-            );
-          })()}
-          <QuestionFeedback isCorrect={feedback.isCorrect} explanation={feedback.explanation} />
-          <button type="button" className="btn btn-primary" onClick={handleNext}>
-            {index + 1 < questions.length ? "Próxima questão" : "Ver resultado"}
-          </button>
-        </>
-      ) : (
-        <QuestionRenderer question={question} onSubmit={handleAnswer} />
-      )}
+      {/* `key` muda a cada questão E a cada troca pergunta/feedback — força o
+       * React a remontar este bloco (em vez de só trocar o conteúdo do MESMO
+       * nó), o que replay a animação `fade-in-up` a cada transição (pedido
+       * do usuário: "está muito seco, adicione transições quando você vai
+       * de uma coisa pra outra"). */}
+      <div key={`${question.id}-${phase}`} className="fade-in-up">
+        {phase === "feedback" && feedback ? (
+          <div className="stack">
+            {(() => {
+              const reaction = answerReaction(feedback.isCorrect);
+              return (
+                <CharacterMessage
+                  character={NEUTRAL_CHARACTER}
+                  expression={reaction.expression}
+                  message={reaction.message}
+                />
+              );
+            })()}
+            <QuestionFeedback isCorrect={feedback.isCorrect} explanation={feedback.explanation} />
+            <button type="button" className="btn btn-primary" onClick={handleNext}>
+              {index + 1 < questions.length ? "Próxima questão" : "Ver resultado"}
+            </button>
+          </div>
+        ) : (
+          <QuestionRenderer question={question} onSubmit={handleAnswer} />
+        )}
+      </div>
     </div>
   );
 }

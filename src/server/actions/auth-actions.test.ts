@@ -126,7 +126,7 @@ describe("auth-actions", () => {
     await expectRedirectTo(() => signInAction({}, form), "/dashboard");
     expect(await getSessionActor()).not.toBeNull();
 
-    await expectRedirectTo(() => signOutAction(), "/login");
+    await expectRedirectTo(() => signOutAction(), "/comecar");
     expect(await getSessionActor()).toBeNull();
   });
 
