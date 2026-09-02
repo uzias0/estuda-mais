@@ -8,8 +8,12 @@
  * promover outros curadores depois. Este script resolve isso da mesma
  * forma que qualquer aplicação real resolve — um utilitário de operação,
  * fora do fluxo HTTP, que só quem tem acesso ao servidor/ao banco pode
- * rodar. Reaproveita `hashPassword` real (`src/server/auth/password.ts`) —
- * não duplica o algoritmo.
+ * rodar. A lógica de criar/atualizar o usuário ADMIN em si vive em
+ * `src/server/auth/bootstrap-admin.service.ts` (`upsertAdminUser`) —
+ * compartilhada com `instrumentation.ts` (fase "recuperar admin sem
+ * Shell": mesma criação/atualização, mas disparada automaticamente no
+ * boot do servidor quando as variáveis de ambiente já estão definidas,
+ * pra quem só tem acesso ao dashboard do Render, não a um terminal).
  *
  * Idempotente: se o e-mail já existir, apenas atualiza senha/role (nunca
  * cria um segundo usuário). Lê credenciais de variáveis de ambiente, com
@@ -32,8 +36,7 @@
  */
 import "dotenv/config"; // mesmo padrão de prisma.config.ts — tsx não carrega .env por conta própria
 import { prisma } from "@/server/db";
-import { Role } from "@/generated/prisma/enums";
-import { hashPassword } from "@/server/auth/password";
+import { upsertAdminUser } from "@/server/auth/bootstrap-admin.service";
 
 const email = process.env.BOOTSTRAP_ADMIN_EMAIL ?? "admin@estuda.local";
 const password = process.env.BOOTSTRAP_ADMIN_PASSWORD ?? "TrocarSenha123!";
@@ -41,28 +44,12 @@ const isDefaultCredential =
   !process.env.BOOTSTRAP_ADMIN_EMAIL || !process.env.BOOTSTRAP_ADMIN_PASSWORD;
 
 async function main() {
-  const passwordHash = await hashPassword(password);
-
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    await prisma.user.update({
-      where: { id: existing.id },
-      data: { passwordHash, role: Role.ADMIN },
-    });
-    console.log(
-      `[bootstrap-admin] usuário existente atualizado: ${email} (role=ADMIN, senha redefinida)`,
-    );
-  } else {
-    await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        role: Role.ADMIN,
-        profile: { create: { name: "Administrador" } },
-      },
-    });
-    console.log(`[bootstrap-admin] usuário ADMIN criado: ${email}`);
-  }
+  const { created } = await upsertAdminUser(email, password);
+  console.log(
+    created
+      ? `[bootstrap-admin] usuário ADMIN criado: ${email}`
+      : `[bootstrap-admin] usuário existente atualizado: ${email} (role=ADMIN, senha redefinida)`,
+  );
 
   if (isDefaultCredential) {
     console.warn(
