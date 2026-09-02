@@ -13,6 +13,7 @@
 export const dynamic = "force-dynamic";
 
 import { RunAnswerLengthBiasFixButton } from "@/components/admin/RunAnswerLengthBiasFixButton";
+import { RunPersonPortraitsFixButton } from "@/components/admin/RunPersonPortraitsFixButton";
 
 export default function ManutencaoPage() {
   return (
@@ -28,6 +29,16 @@ export default function ManutencaoPage() {
           corrigidas aparecem como &quot;já atualizada&quot;, sem duplicar nada.
         </p>
         <RunAnswerLengthBiasFixButton />
+      </div>
+
+      <div className="card stack">
+        <p className="card-title">Aplicar retratos da Biblioteca de Pessoas</p>
+        <p style={{ color: "var(--color-text-muted)" }}>
+          Define <code>imageUrl</code> das pessoas (Base de Conhecimento) cujo retrato já foi
+          recebido e processado — mostra a ilustração real em vez de só as iniciais em
+          &quot;Biblioteca → Pessoas&quot;. Seguro rodar mais de uma vez.
+        </p>
+        <RunPersonPortraitsFixButton />
       </div>
     </div>
   );

@@ -43,7 +43,12 @@ export default async function BibliotecaPage({ searchParams }: PageProps<"/dashb
 
   return (
     <div className="page-container stack">
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 800 }}>Biblioteca</h1>
+      <div className="row-wrap" style={{ justifyContent: "space-between" }}>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 800 }}>Biblioteca</h1>
+        <Link href="/dashboard/biblioteca/pessoas" className="btn btn-secondary">
+          Ver pessoas
+        </Link>
+      </div>
 
       <form method="GET" className="card row-wrap">
         <select

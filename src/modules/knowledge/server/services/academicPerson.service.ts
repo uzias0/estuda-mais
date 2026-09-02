@@ -159,10 +159,30 @@ export async function getAcademicPerson(id: string) {
   });
 }
 
-export async function listAcademicPersons(params?: { take?: number; skip?: number }) {
+export async function listAcademicPersons(params?: {
+  take?: number;
+  skip?: number;
+  status?: PublicationStatus;
+}) {
   return prisma.academicPerson.findMany({
     take: params?.take ?? 50,
     skip: params?.skip ?? 0,
+    where: params?.status ? { status: params.status } : undefined,
     orderBy: { name: "asc" },
+  });
+}
+
+/**
+ * Leitura pública por `slug` (fase "Biblioteca de Pessoas" — pedido do
+ * usuário: mostrar a bio real de cada pensador, com a arte que ele
+ * mandou). Só devolve registros PUBLISHED — mesmo padrão de
+ * `getLibraryItem`/`[id]/page.tsx` (checa `status` de novo na própria
+ * página, defesa em profundidade contra acesso direto por slug de algo
+ * ainda em rascunho).
+ */
+export async function getAcademicPersonBySlug(slug: string) {
+  return prisma.academicPerson.findUnique({
+    where: { slug },
+    include: { period: true, tags: true, works: { include: { work: true } } },
   });
 }

@@ -14,7 +14,18 @@ const personFields = {
   deathDate: z.coerce.date().optional(),
   periodId: z.string().min(1).optional(),
   countryContext: z.string().max(200).optional(),
-  imageUrl: z.string().url().optional(),
+  // Aceita tanto uma URL completa (imagem hospedada externamente) quanto
+  // um caminho relativo à raiz (`/people/slug.png`, `public/people/`) —
+  // fase "Biblioteca de Pessoas": as ilustrações reais que o usuário
+  // mandou são asset local do próprio app, mesmo padrão já usado por
+  // `CharacterDef.portrait` (`config/characters.ts`), nunca uma URL
+  // externa de terceiro.
+  imageUrl: z
+    .string()
+    .refine((v) => v.startsWith("/") || z.string().url().safeParse(v).success, {
+      message: "imageUrl deve ser uma URL completa ou um caminho relativo iniciado por '/'",
+    })
+    .optional(),
 };
 
 function assertDeathAfterBirth(v: { birthDate?: Date; deathDate?: Date }) {

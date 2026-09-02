@@ -16,6 +16,10 @@ import {
   applyAnswerLengthBiasFixes,
   type AnswerLengthBiasFixResult,
 } from "@/modules/assessment/server/services/answer-length-bias-fix.service";
+import {
+  applyPersonPortraits,
+  type PersonPortraitFixResult,
+} from "@/modules/knowledge/server/services/academic-person-portraits-fix.service";
 
 export interface RunAnswerLengthBiasFixResult {
   fixed: number;
@@ -25,4 +29,14 @@ export interface RunAnswerLengthBiasFixResult {
 export async function runAnswerLengthBiasFixAction(): Promise<RunAnswerLengthBiasFixResult> {
   const actor = await requireAdminSessionActor();
   return applyAnswerLengthBiasFixes(actor);
+}
+
+export interface RunPersonPortraitsFixResult {
+  updated: number;
+  results: PersonPortraitFixResult[];
+}
+
+export async function runPersonPortraitsFixAction(): Promise<RunPersonPortraitsFixResult> {
+  const actor = await requireAdminSessionActor();
+  return applyPersonPortraits(actor);
 }
