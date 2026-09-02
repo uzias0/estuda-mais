@@ -117,6 +117,41 @@ MESMA prova.
 Total agora: **2 provas reais, 69 questões**, ambas testadas
 end-to-end no navegador (dropdown "Prova real" lista as duas).
 
+## Rodada 3 — MPSP (Analista de Promotoria I, Psicólogo)
+
+Terceira prova real: **Analista de Promotoria I - Psicólogo,
+Ministério Público do Estado de São Paulo (MPSP), Concurso Público
+nº 01/2022, Edital nº 29/2023, banca FGV**, prova aplicada em
+12/03/2023.
+
+- Fonte oficial: [prova](https://conhecimento.fgv.br/sites/default/files/concursos/cns005-analista-de-promotoria-i-area-de-saude-e-assistencia-social-psicologocns005-tipo-1.pdf)
+  e [gabarito definitivo](https://conhecimento.fgv.br/sites/default/files/concursos/edital-33-analista-de-promotoria-i-gabaritos-definitivos-e-resultados-recursos-para-publicacao-mpsp-.pdf)
+  (Edital nº 33/2023, pós-recursos, 04/04/2023 — este gabarito também é
+  consolidado, cobrindo todos os cargos "Analista de Promotoria I"
+  dessa onda: Assistente Social, Médico Clínico, Médico Psiquiatra,
+  Médico do Trabalho, Psicólogo; usamos só a tabela "Analista de
+  Promotoria I - Psicólogo - TIPO 1", parseada por script).
+- `scripts/seed-exam-mpsp-psicologo-2023.ts` — **30 questões**
+  (questões 41-70, "Módulo II — Conhecimentos Específicos"; 1-40 são
+  Português/Raciocínio Lógico/Atualidades/Noções de Direito, fora do
+  escopo). Nenhuma questão desse intervalo foi anulada (a única
+  anulação de toda a onda foi na prova do Médico do Trabalho, cargo
+  diferente). Conteúdo cobre desde ética profissional e avaliação
+  psicológica até psicanálise freudiana e lacaniana — o nível mais
+  avançado das três provas importadas até agora.
+- Mesma disciplina de sempre: idempotente, `reproductionAllowed: true`,
+  procedência documentada em `Source.rightsNote`.
+- **Mesmo efeito colateral da Rodada 2, desta vez no teste "filtra por
+  ano da prova"**: essa prova é do mesmo ano (2023) que o fixture do
+  teste `questionQuery.service.test.ts`, quebrando uma igualdade exata
+  (`toEqual([questionIds[1]])`) que assumia ser o único registro
+  daquele ano no banco de dev compartilhado. Corrigido com o mesmo
+  padrão já estabelecido: `arrayContaining` + `take: 500` +
+  `not.toContain` do id do ano errado, em vez de igualdade exata.
+
+Total agora: **3 provas reais, 99 questões**, todas testadas
+end-to-end no navegador (dropdown "Prova real" lista as três).
+
 ## Próximos passos
 
 Os outros 4 links que o usuário forneceu (pciconcursos.com.br

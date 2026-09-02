@@ -109,11 +109,17 @@ describe("listQuestions — filtros tipados", () => {
   });
 
   it("filtra por ano da prova (ExamEdition.year), não por data de cadastro", async () => {
-    const results2023 = await listQuestions({ year: 2023 });
-    expect(results2023.map((r) => r.id)).toEqual([questionIds[1]]);
+    // `arrayContaining`/`take` alto, não igualdade exata: o banco de dev é
+    // compartilhado entre arquivos de teste E com o conteúdo real de provas
+    // (que também tem ano de aplicação) — outra prova real pode
+    // legitimamente cair no mesmo ano.
+    const results2023 = await listQuestions({ year: 2023, take: 500 });
+    expect(results2023.map((r) => r.id)).toEqual(expect.arrayContaining([questionIds[1]]));
+    expect(results2023.map((r) => r.id)).not.toContain(questionIds[0]); // 2015, ano diferente
 
-    const results2015 = await listQuestions({ year: 2015 });
-    expect(results2015.map((r) => r.id)).toEqual([questionIds[0]]);
+    const results2015 = await listQuestions({ year: 2015, take: 500 });
+    expect(results2015.map((r) => r.id)).toEqual(expect.arrayContaining([questionIds[0]]));
+    expect(results2015.map((r) => r.id)).not.toContain(questionIds[1]); // 2023, ano diferente
   });
 
   it("filtra por examEditionId", async () => {
