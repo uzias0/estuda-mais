@@ -24,6 +24,7 @@
     "db:seed-academic-v2": "tsx scripts/seed-academic-content-v2.ts",
     "db:fix-answer-length-bias": "tsx scripts/fix-answer-length-bias.ts",
     "db:fix-person-portraits": "tsx scripts/fix-person-portraits.ts",
+    "db:normalize-emails": "tsx scripts/normalize-user-emails.ts",
     "cap:sync": "npx cap sync android",
     "android:open": "npx cap sync android && npx cap open android",
     "android:build": "node scripts/android-build.mjs",

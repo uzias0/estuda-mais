@@ -102,6 +102,30 @@ describe("auth.service", () => {
     ).rejects.toThrow(AuthError);
   });
 
+  it("signUp rejeita e-mail já cadastrado mesmo com capitalização diferente (fase 'recuperar admin sem Shell')", async () => {
+    await expect(
+      signUp({
+        email: email.toUpperCase(),
+        password: "OutraSenha123!",
+        name: "TEST_FIXTURE Duplicado Maiúsculo",
+      }),
+    ).rejects.toThrow(AuthError);
+  });
+
+  it("signUp normaliza o e-mail para minúsculas ao gravar, mesmo se digitado em maiúsculas", async () => {
+    const mixedCaseEmail = `Test-Fixture-Auth-Mixed-Case-${Date.now()}@Example.Invalid`;
+    const result = await signUp({
+      email: mixedCaseEmail,
+      password: "SenhaForte123!",
+      name: "TEST_FIXTURE Maiúsculo",
+    });
+    userIds.push(result.actor.userId);
+    sessionIds.push(result.sessionId);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: result.actor.userId } });
+    expect(user.email).toBe(mixedCaseEmail.toLowerCase());
+  });
+
   it("signUp ignora um `role` forjado — sempre nasce STUDENT mesmo se o payload tivesse outro campo", async () => {
     // O schema de entrada (`SignUpInputSchema`) nem sequer tem campo `role` —
     // um objeto com `role` extra é simplesmente ignorado pelo `.parse()`, o
@@ -121,6 +145,13 @@ describe("auth.service", () => {
 
   it("signIn autentica com a senha certa e cria uma nova sessão (sem 2FA ativado)", async () => {
     const result = await signIn({ email, password: "SenhaForte123!" });
+    if (result.requiresTwoFactor) throw new Error("Não deveria exigir 2FA — não está ativado.");
+    sessionIds.push(result.sessionId);
+    expect(result.actor.role).toBe(Role.STUDENT);
+  });
+
+  it("signIn funciona mesmo digitando o e-mail com capitalização diferente da usada no cadastro (fase 'recuperar admin sem Shell' — achado real: 'E-mail ou senha inválidos' mesmo com a senha certa)", async () => {
+    const result = await signIn({ email: email.toUpperCase(), password: "SenhaForte123!" });
     if (result.requiresTwoFactor) throw new Error("Não deveria exigir 2FA — não está ativado.");
     sessionIds.push(result.sessionId);
     expect(result.actor.role).toBe(Role.STUDENT);

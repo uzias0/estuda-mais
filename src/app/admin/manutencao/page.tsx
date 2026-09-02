@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 import { RunAnswerLengthBiasFixButton } from "@/components/admin/RunAnswerLengthBiasFixButton";
 import { RunPersonPortraitsFixButton } from "@/components/admin/RunPersonPortraitsFixButton";
+import { RunNormalizeEmailsButton } from "@/components/admin/RunNormalizeEmailsButton";
 
 export default function ManutencaoPage() {
   return (
@@ -39,6 +40,17 @@ export default function ManutencaoPage() {
           &quot;Biblioteca → Pessoas&quot;. Seguro rodar mais de uma vez.
         </p>
         <RunPersonPortraitsFixButton />
+      </div>
+
+      <div className="card stack">
+        <p className="card-title">Normalizar e-mails para minúsculas</p>
+        <p style={{ color: "var(--color-text-muted)" }}>
+          Corrige contas cujo e-mail está gravado com alguma letra maiúscula — login agora sempre
+          compara em minúsculas, então uma conta com capitalização diferente da que a pessoa digita
+          nunca conseguiria entrar. Pula (e sinaliza) qualquer colisão real com outra conta. Seguro
+          rodar mais de uma vez.
+        </p>
+        <RunNormalizeEmailsButton />
       </div>
     </div>
   );

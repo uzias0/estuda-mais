@@ -49,6 +49,32 @@ describe("upsertAdminUser", () => {
     expect(await verifyPassword("SenhaNova456!", after.passwordHash!)).toBe(true);
     expect(await verifyPassword("SenhaOriginal123!", after.passwordHash!)).toBe(false);
   });
+
+  it("é case-insensitive: chamado de novo com uma capitalização diferente atualiza a MESMA conta, gravando o e-mail em minúsculas (fase 'recuperar admin sem Shell')", async () => {
+    const mixedCaseEmail = `Test-Fixture-Bootstrap-Admin-Mixed-${Date.now()}@Example.Invalid`;
+
+    const { created: firstCreated } = await upsertAdminUser(mixedCaseEmail, "SenhaMista123!");
+    expect(firstCreated).toBe(true);
+    const first = await prisma.user.findUniqueOrThrow({
+      where: { email: mixedCaseEmail.toLowerCase() },
+    });
+    userIds.push(first.id);
+    expect(first.email).toBe(mixedCaseEmail.toLowerCase()); // já grava em minúsculas
+
+    const { created: secondCreated } = await upsertAdminUser(
+      mixedCaseEmail.toUpperCase(),
+      "SenhaAtualizada456!",
+    );
+    expect(secondCreated).toBe(false); // achou a mesma conta, não criou uma segunda
+
+    const totalWithThisEmail = await prisma.user.count({
+      where: { email: mixedCaseEmail.toLowerCase() },
+    });
+    expect(totalWithThisEmail).toBe(1);
+
+    const second = await prisma.user.findUniqueOrThrow({ where: { id: first.id } });
+    expect(await verifyPassword("SenhaAtualizada456!", second.passwordHash!)).toBe(true);
+  });
 });
 
 describe("bootstrapAdminIfConfigured", () => {

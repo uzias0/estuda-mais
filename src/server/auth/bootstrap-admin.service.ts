@@ -26,17 +26,31 @@ import { prisma } from "@/server/db";
 import { Role } from "@/generated/prisma/enums";
 import { hashPassword } from "@/server/auth/password";
 
+/**
+ * `email` é sempre normalizado para minúsculas (mesma correção da fase
+ * "recuperar admin sem Shell" — ver `auth.schema.ts`/`emailSchema`): o
+ * login real (`signIn`) já compara em minúsculas, então gravar/achar
+ * qualquer outra capitalização aqui criaria a MESMA falha que motivou
+ * esta fase (conta existe, senha certa, mas o e-mail salvo não bate
+ * com o que o usuário digita). A busca por um registro já existente é
+ * case-insensitive de propósito (`mode: "insensitive"`) — cobre uma
+ * conta já criada com uma capitalização diferente ANTES desta correção
+ * existir, sem criar um segundo usuário para o mesmo e-mail.
+ */
 export async function upsertAdminUser(
-  email: string,
+  rawEmail: string,
   password: string,
 ): Promise<{ created: boolean }> {
+  const email = rawEmail.toLowerCase();
   const passwordHash = await hashPassword(password);
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
   if (existing) {
     await prisma.user.update({
       where: { id: existing.id },
-      data: { passwordHash, role: Role.ADMIN },
+      data: { email, passwordHash, role: Role.ADMIN },
     });
     return { created: false };
   }

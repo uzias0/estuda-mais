@@ -34,6 +34,14 @@ describe("password-reset.service", () => {
     expect(token!.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
+  it("requestPasswordReset encontra a conta mesmo com o e-mail digitado em capitalização diferente (fase 'recuperar admin sem Shell')", async () => {
+    const { email, userId } = await createUser("case-insensitive");
+    await requestPasswordReset({ email: email.toUpperCase() }, BASE_URL);
+
+    const token = await prisma.passwordResetToken.findFirst({ where: { userId } });
+    expect(token).not.toBeNull();
+  });
+
   it("requestPasswordReset resolve sem erro para um e-mail inexistente, sem criar nenhum token (não revela quais e-mails existem)", async () => {
     const before = await prisma.passwordResetToken.count();
     await expect(

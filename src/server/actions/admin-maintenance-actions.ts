@@ -20,6 +20,10 @@ import {
   applyPersonPortraits,
   type PersonPortraitFixResult,
 } from "@/modules/knowledge/server/services/academic-person-portraits-fix.service";
+import {
+  normalizeAllUserEmails,
+  type EmailNormalizationResult,
+} from "@/server/auth/normalize-user-emails.service";
 
 export interface RunAnswerLengthBiasFixResult {
   fixed: number;
@@ -39,4 +43,14 @@ export interface RunPersonPortraitsFixResult {
 export async function runPersonPortraitsFixAction(): Promise<RunPersonPortraitsFixResult> {
   const actor = await requireAdminSessionActor();
   return applyPersonPortraits(actor);
+}
+
+export interface RunNormalizeEmailsResult {
+  normalized: number;
+  results: EmailNormalizationResult[];
+}
+
+export async function runNormalizeEmailsAction(): Promise<RunNormalizeEmailsResult> {
+  await requireAdminSessionActor();
+  return normalizeAllUserEmails();
 }
