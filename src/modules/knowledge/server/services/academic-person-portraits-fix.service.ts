@@ -20,11 +20,11 @@ import { updateAcademicPerson } from "@/modules/knowledge/server/services/academ
 
 /**
  * slug (`AcademicPerson.slug`) -> caminho do arquivo em `public/people/`.
- * Todas as 20 pessoas da Base de Conhecimento têm arte agora, exceto
- * Lev Vygotsky — só recebeu a versão "mascote" (`public/characters/`,
- * fase "Arte Própria dos Personagens"), nunca uma folha no estilo
- * "Biblioteca de Pessoas"; os dois contextos usam arquivos distintos de
- * propósito, então o mascote não é reaproveitado aqui.
+ * Todas as 20 pessoas da Base de Conhecimento têm arte real agora,
+ * incluindo Lev Vygotsky (que também tem uma versão "mascote" separada
+ * em `public/characters/`, fase "Arte Própria dos Personagens" — os
+ * dois contextos usam arquivos distintos de propósito, nenhum
+ * reaproveitamento entre eles).
  */
 export const PERSON_PORTRAITS: Record<string, string> = {
   "aaron-beck": "/people/aaron-beck.png",
@@ -41,6 +41,7 @@ export const PERSON_PORTRAITS: Record<string, string> = {
   "john-b-watson": "/people/john-b-watson.png",
   "karen-horney": "/people/karen-horney.png",
   "kurt-lewin": "/people/kurt-lewin.png",
+  "lev-vygotsky": "/people/lev-vygotsky.png",
   "mary-ainsworth": "/people/mary-ainsworth.png",
   "melanie-klein": "/people/melanie-klein.png",
   "sigmund-freud": "/people/sigmund-freud.png",

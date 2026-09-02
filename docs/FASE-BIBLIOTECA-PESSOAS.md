@@ -21,18 +21,14 @@
   iniciais + nome + anos) e `/dashboard/biblioteca/pessoas/[slug]`
   (foto, nome completo, anos, país, biografia, obras). Link "Ver
   pessoas" adicionado à Biblioteca existente.
-- **Retratos**: 19 das 20 pessoas da Base de Conhecimento já têm
-  ilustração real (mandada pelo usuário, mesmo processo de extração do
-  transcript + recorte + remoção de fundo da fase "Arte Própria dos
-  Personagens") — `public/people/{slug}.png`. Só Lev Vygotsky continua
-  mostrando as iniciais — só recebeu a versão "mascote"
-  (`public/characters/`), nunca uma folha no estilo "Biblioteca de
-  Pessoas" (contextos deliberadamente distintos, ver seção abaixo).
-  Duas pessoas (Sigmund Freud, Wilhelm Wundt) têm um leve resquício de
-  fundo (a folha de figurinhas deles usa um fundo ilustrado, não branco
-  liso — a remoção automática de fundo não consegue limpar
-  completamente); pouco perceptível no tamanho real de exibição
-  (72-120px), aceito como está.
+- **Retratos**: as 20 pessoas da Base de Conhecimento têm ilustração
+  real (mandada pelo usuário, mesmo processo de extração do transcript
+  + recorte + remoção de fundo da fase "Arte Própria dos Personagens")
+  — `public/people/{slug}.png`. Duas pessoas (Sigmund Freud, Wilhelm
+  Wundt) têm um leve resquício de fundo (a folha de figurinhas deles
+  usa um fundo ilustrado, não branco liso — a remoção automática de
+  fundo não consegue limpar completamente); pouco perceptível no
+  tamanho real de exibição (72-120px), aceito como está.
 - `academic-person-portraits-fix.service.ts` (+ CLI
   `scripts/fix-person-portraits.ts`, `npm run db:fix-person-portraits`,
   + botão em `/admin/manutencao`, mesmo padrão de
@@ -53,13 +49,9 @@ conexão exigiria uma decisão de modelagem de conteúdo (adicionar uma
 relação `Theory.personId` ou equivalente) — maior que só um recorte de
 imagem, fica pra uma conversa/entrega separada.
 
-## Retrato ainda pendente
+## Retratos pendentes
 
-Só Lev Vygotsky. Se/quando uma folha no estilo "Biblioteca de Pessoas"
-chegar pra ele: recortar (mesmo processo), salvar em
-`public/people/lev-vygotsky.png`, adicionar ao `PERSON_PORTRAITS` em
-`academic-person-portraits-fix.service.ts`, rodar a correção (CLI ou
-botão do admin).
+Nenhum — as 20 pessoas têm ilustração real.
 
 ## Verificação
 
@@ -67,9 +59,11 @@ botão do admin).
 - `npm run db:fix-person-portraits` rodado em duas levas conforme a
   arte chegava (12 pessoas, depois +7): idempotência confirmada em
   cada rodada (quem já tinha retrato aparece "já está atualizada").
-- Verificado ao vivo: `/dashboard/biblioteca/pessoas` mostra as 19
-  fotos reais + Lev Vygotsky com iniciais (nunca uma imagem inventada);
-  detalhe de Aaron Beck mostra foto, nome completo, anos, país,
-  biografia real e a obra citada (`Terapia Cognitiva dos Transtornos
-  Emocionais`, 1976); detalhe de Sigmund Freud confirma que o resquício
-  de fundo é imperceptível no tamanho real de exibição.
+- Verificado ao vivo: `/dashboard/biblioteca/pessoas` mostra as 20
+  fotos reais (nunca uma imagem inventada); detalhe de Aaron Beck
+  mostra foto, nome completo, anos, país, biografia real e a obra
+  citada (`Terapia Cognitiva dos Transtornos Emocionais`, 1976);
+  detalhe de Sigmund Freud confirma que o resquício de fundo é
+  imperceptível no tamanho real de exibição; detalhe de Lev Vygotsky
+  confirma a última pessoa (mascote vs. Biblioteca de Pessoas usando
+  arquivos distintos corretamente).
