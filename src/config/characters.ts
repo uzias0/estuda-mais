@@ -42,9 +42,16 @@ export type CharacterExpression =
  * de redesign visual — antes todos os personagens usavam exatamente a
  * mesma forma, só variando a cor de preenchimento, o que na prática lia
  * como "uma carinha colorida genérica", nunca como Freud/Jung/etc.
- * distintos). Continua um traço 100% geométrico/flat, nunca um retrato
- * real — só um punhado de formas a mais (cabelo, óculos, barba) compostas
- * pelo mesmo `CharacterAvatar`, sem imagem nova por personagem.
+ * distintos). Traço 100% geométrico/flat por padrão — só um punhado de
+ * formas a mais (cabelo, óculos, barba) compostas pelo mesmo
+ * `CharacterAvatar`, sem imagem nova por personagem.
+ *
+ * Fase "arte própria dos personagens" — pedido do usuário: "ficou muito
+ * ruim, você só colocou um círculo com uma barba literalmente, péssimo,
+ * eu vou criar" — o usuário desenhou (fez gerar) uma ilustração real por
+ * personagem e mandou os arquivos; `portrait`, quando presente, faz
+ * `CharacterAvatar` mostrar essa imagem em vez da forma geométrica (ver
+ * `public/characters/`, `docs/FASE-ARTE-PERSONAGENS.md`).
  */
 export interface CharacterFeatures {
   hair?: "bald" | "receding" | "side-part" | "short-neat" | "wavy";
@@ -61,6 +68,8 @@ export interface CharacterDef {
   /** Slug de `School` que este personagem representa, quando existir de verdade. */
   schoolSlug?: string;
   features?: CharacterFeatures;
+  /** Ilustração real (PNG, fundo transparente, `public/characters/`) — quando presente, substitui o avatar SVG geométrico. */
+  portrait?: string;
 }
 
 export const CHARACTERS: Record<string, CharacterDef> = {
@@ -82,6 +91,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       glasses: "round",
       facialHair: "full-beard",
     },
+    portrait: "/characters/freud.png",
   },
   jung: {
     id: "jung",
@@ -90,6 +100,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     colorway: { skin: "#7fa6c9", accent: "#3d6690" },
     schoolSlug: "psicologia-analitica",
     features: { hair: "side-part", hairColor: "#5a4632", glasses: "oval", facialHair: "goatee" },
+    portrait: "/characters/jung.png",
   },
   skinner: {
     id: "skinner",
@@ -98,6 +109,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     colorway: { skin: "#7fbf8f", accent: "#2e7d4f" },
     schoolSlug: "behaviorismo",
     features: { hair: "short-neat", hairColor: "#2e2620" },
+    portrait: "/characters/skinner.png",
   },
   piaget: {
     id: "piaget",
@@ -106,6 +118,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     colorway: { skin: "#e0a458", accent: "#b5651d" },
     schoolSlug: "psicologia-do-desenvolvimento",
     features: { hair: "bald", hairColor: "#e6e2da", glasses: "round" },
+    portrait: "/characters/piaget.png",
   },
   rogers: {
     id: "rogers",
@@ -114,6 +127,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     colorway: { skin: "#e08fa0", accent: "#c4536b" },
     schoolSlug: "humanismo",
     features: { hair: "wavy", hairColor: "#dcdad4" },
+    portrait: "/characters/rogers.png",
   },
   bandura: {
     id: "bandura",
@@ -122,6 +136,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     colorway: { skin: "#a68fe0", accent: "#6c4bb5" },
     schoolSlug: "aprendizagem-social",
     features: { hair: "side-part", hairColor: "#3a2f26", facialHair: "mustache" },
+    portrait: "/characters/bandura.png",
   },
 };
 

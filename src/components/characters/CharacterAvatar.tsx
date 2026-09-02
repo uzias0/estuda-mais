@@ -1,10 +1,17 @@
 /**
  * Avatar de personagem (etapa de consolidação, seção 4) — SVG geométrico
- * ORIGINAL (sem IA generativa de imagem, sem arte de terceiros): um rosto
- * abstrato flat-design cuja cor e expressão variam por `character`/
- * `expression`. Não é um retrato de ninguém — é uma representação visual
- * simples, sempre acompanhada do NOME real no texto ao lado (nunca
- * pretende ser uma fotografia).
+ * ORIGINAL por padrão: um rosto abstrato flat-design cuja cor e expressão
+ * variam por `character`/`expression`. Sempre acompanhado do NOME real no
+ * texto ao lado (nunca pretende ser uma fotografia).
+ *
+ * Fase "arte própria dos personagens" (pedido do usuário, depois de ver o
+ * SVG geométrico: "ficou muito ruim, você só colocou um círculo com uma
+ * barba literalmente, péssimo, eu vou criar") — quando `character.portrait`
+ * existe (`config/characters.ts`), mostra essa ilustração (mandada pelo
+ * próprio usuário, `public/characters/`) em vez da forma geométrica. A
+ * expressão (`expression`) não varia a ilustração — cada `portrait` é uma
+ * pose fixa só; a "vida" do personagem continua vindo de fora do rosto em
+ * si (animações de entrada, celebração, etc.), não de trocar a arte.
  */
 import type { CharacterDef, CharacterExpression, CharacterFeatures } from "@/config/characters";
 
@@ -338,6 +345,31 @@ export function CharacterAvatar({
   const px = SIZE_PX[size];
   const features = character.features;
   const hairColor = features?.hairColor ?? "#3a3a3a";
+
+  if (character.portrait) {
+    // Asset local simples (`public/characters/`), sem necessidade da
+    // otimização de `next/image` (nenhum domínio remoto, poucos
+    // arquivos, tamanho já pequeno) — mesma disciplina de "não trocar
+    // de ferramenta sem necessidade" já seguida pelo resto do módulo.
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={character.portrait}
+        alt={`${character.name} — ${character.role}`}
+        width={px}
+        height={px}
+        style={{
+          width: px,
+          height: px,
+          borderRadius: "50%",
+          objectFit: "cover",
+          border: `3px solid ${character.colorway.accent}`,
+          background: character.colorway.skin,
+        }}
+      />
+    );
+  }
+
   return (
     <svg
       width={px}
