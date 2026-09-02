@@ -82,6 +82,19 @@
   --shadow-float: 0 6px 20px rgba(91, 91, 240, 0.22);
   --shadow-pop: 0 16px 40px rgba(20, 22, 35, 0.14);
 
+  /* Fase "botões menos artificiais" (pedido do usuário: "os botões deixe
+   * menos artificial também, eu quero tudo que pareça bem texturizado,
+   * bem bonito") — uma borda inferior sólida (mais escura que o próprio
+   * botão) dá profundidade real ("pressionável", estilo já consagrado em
+   * apps de aprendizado gamificados) em vez do botão flat só com sombra
+   * difusa de antes. Tokens dedicados (não reaproveita `--color-brand-
+   * strong`/`--color-border`): no tema escuro, `--color-brand-strong` é
+   * DE PROPÓSITO mais claro que `--color-brand` (contraste de texto/link),
+   * o oposto do que uma borda de profundidade precisa (sempre mais escura
+   * que o preenchimento, nos dois temas). */
+  --color-btn-primary-edge: #4444d1;
+  --color-btn-secondary-edge: #c7cbd6;
+
   /* "Estrada" do caminho de aprendizagem (fase de design profundo — pedido
    * do usuário: "eu quero uma estrada ali, tudo bonitinho") — cores
    * dedicadas, mais visíveis que `--color-border`/`--color-surface-muted`
@@ -110,6 +123,8 @@
     --color-warning-bg: #3a2a0c;
     --color-path: #3f4258;
     --color-path-edge: #565a78;
+    --color-btn-primary-edge: #5252c4;
+    --color-btn-secondary-edge: #14151c;
   }
 }
 
@@ -234,12 +249,9 @@ p {
   cursor: pointer;
   min-height: 44px;
   transition:
-    transform 0.05s ease,
-    opacity 0.15s ease;
-}
-
-.btn:active {
-  transform: scale(0.98);
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-base) ease,
+    box-shadow var(--motion-base) ease;
 }
 
 .btn:disabled {
@@ -247,35 +259,66 @@ p {
   cursor: not-allowed;
 }
 
+/* Fase "botões menos artificiais" (pedido do usuário: "os botões deixe
+ * menos artificial também, eu quero tudo que pareça bem texturizado,
+ * bem bonito") — uma borda inferior SÓLIDA (mais escura que o
+ * preenchimento, `--color-btn-*-edge`) dá profundidade real: o botão
+ * parece um objeto físico "pressionável" (mesma linguagem visual já
+ * consagrada em apps de estudo gamificados), não mais um retângulo
+ * flat só com sombra difusa por baixo. Ao pressionar, o botão desce e a
+ * borda "recolhe" quase a zero — o orçamento de profundidade (a borda
+ * em repouso + o quanto desce) é sempre igual, pra parecer um botão de
+ * verdade afundando na própria base, não só um `scale()` genérico. */
 .btn-primary {
   background: var(--gradient-brand);
   color: #ffffff;
-  box-shadow: var(--shadow-float);
-  transition:
-    transform var(--motion-fast) var(--ease-standard),
-    opacity var(--motion-base) ease,
-    box-shadow var(--motion-base) ease;
+  box-shadow:
+    0 4px 0 var(--color-btn-primary-edge),
+    var(--shadow-float);
 }
 /* `hover:hover` evita o "hover fantasma" que toque em tela sensível ao toque
  * dispara em navegadores mobile — só eleva de verdade quando há mouse. */
 @media (hover: hover) {
   .btn-primary:hover:not(:disabled) {
-    box-shadow: 0 8px 26px rgba(91, 91, 240, 0.3);
+    box-shadow:
+      0 4px 0 var(--color-btn-primary-edge),
+      0 8px 26px rgba(91, 91, 240, 0.3);
     transform: translateY(-1px);
   }
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--color-btn-primary-edge);
 }
 
 .btn-secondary {
   background: var(--color-surface-muted);
   color: var(--color-text);
   border-color: var(--color-border);
+  box-shadow: 0 3px 0 var(--color-btn-secondary-edge);
 }
 .btn-secondary:hover:not(:disabled) {
   background: var(--color-border);
 }
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--color-btn-secondary-edge);
+}
 
 .btn-block {
   width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-secondary {
+    transition: none;
+  }
+  .btn-primary:hover:not(:disabled),
+  .btn-primary:active:not(:disabled),
+  .btn-secondary:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 /* ---- Badges / status ---------------------------------------------------- */
