@@ -138,12 +138,16 @@ describe("listQuestions — filtros tipados", () => {
     // `arrayContaining`, não igualdade exata: o banco de dev é compartilhado
     // entre arquivos de teste (mesmo princípio das demais checagens deste
     // arquivo, ex.: "filtra por difficulty") — outra fixture pode
-    // legitimamente cair na mesma faixa de anos.
-    const results = await listQuestions({ yearFrom: 2020, yearTo: 2025 });
+    // legitimamente cair na mesma faixa de anos. `take` explícito e alto:
+    // o padrão de `listQuestions` é 50 e `orderBy` prioriza o ano da prova
+    // mais recente — com o conteúdo real de provas crescendo (2024/2025),
+    // o fixture desta prova (ano 2023) fica fora da primeira página sem
+    // isso, mesmo estando dentro da faixa filtrada.
+    const results = await listQuestions({ yearFrom: 2020, yearTo: 2025, take: 500 });
     expect(results.map((r) => r.id)).toEqual(expect.arrayContaining([questionIds[1]]));
     expect(results.map((r) => r.id)).not.toContain(questionIds[0]); // 2015, fora da faixa
 
-    const wideRange = await listQuestions({ yearFrom: 2010, yearTo: 2025 });
+    const wideRange = await listQuestions({ yearFrom: 2010, yearTo: 2025, take: 500 });
     expect(wideRange.map((r) => r.id)).toEqual(
       expect.arrayContaining([questionIds[0], questionIds[1]]),
     );

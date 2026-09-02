@@ -82,13 +82,51 @@ nome/prompt antes de criar.
   real" → prova aparece no dropdown → monta simulado de 39 questões →
   responde a primeira questão → avança corretamente para a próxima.
 
+## Rodada 2 — EBSERH (Neuropsicologia / Psicologia Hospitalar / Organizacional)
+
+Segunda prova real: **Grupo Psicologia, EBSERH, Edital nº 03/2024,
+banca FGV**, aplicada em 16/03/2025 — cobre as três especializações
+(Psicólogo - Neuropsicologia, Psicólogo - Psicologia Hospitalar,
+Psicólogo - Psicologia Organizacional e do Trabalho), que fazem a
+MESMA prova.
+
+- Fonte oficial: [prova](https://conhecimento.fgv.br/sites/default/files/concursos/grupo-12-psicologiae3cnsgp12-tipo-1.pdf)
+  e [gabarito definitivo](https://conhecimento.fgv.br/sites/default/files/concursos/ebserrhassistencial2024_gabarito_definitivo.pdf)
+  (este gabarito é CONSOLIDADO — cobre 23 páginas com todos os cargos
+  do mesmo concurso EBSERH; usamos só a tabela "Grupo - Psicologia -
+  TIPO 1", parseada por script).
+- `scripts/seed-exam-ebserh-psicologia-2025.ts` — **30 questões**
+  (questões 31-60, bloco "Conhecimentos Específicos"; 1-30 são
+  Português/Legislação EBSERH/Políticas Públicas, fora do escopo).
+  Nenhuma questão desse intervalo foi anulada. Mesma disciplina de
+  sempre: idempotente, `reproductionAllowed: true`, procedência
+  documentada em `Source.rightsNote`.
+- **Efeito colateral descoberto e corrigido**: somar 69 questões reais
+  novas (2024/2025) expôs uma fragilidade pré-existente em
+  `questionQuery.service.test.ts` — o teste de filtro por
+  `yearFrom`/`yearTo` dependia do limite padrão de paginação
+  (`take: 50`) de `listQuestions` sem passar um `take` explícito;
+  como a ordenação prioriza `examEdition.year desc`, os 69 registros
+  novos (anos mais recentes) empurraram o fixture do próprio teste
+  (ano 2023) para fora da primeira página. Corrigido passando
+  `take: 500` explicitamente nesse teste — não é um bug em
+  `listQuestions`, é o teste assumindo um volume de dados que deixou
+  de ser realista à medida que o conteúdo real cresce (e vai continuar
+  crescendo).
+
+Total agora: **2 provas reais, 69 questões**, ambas testadas
+end-to-end no navegador (dropdown "Prova real" lista as duas).
+
 ## Próximos passos
 
-Esta é a PRIMEIRA prova real de possivelmente muitas. Os outros 4 links
-que o usuário forneceu (pciconcursos.com.br listagens gerais de FGV/
-Psicólogo, CFP título de especialista, Gran Cursos, editais do
-Ministério das Mulheres) contêm dezenas de outras provas candidatas —
-cada uma precisa do mesmo tratamento cuidadoso (baixar PDF oficial,
-achar o gabarito definitivo, filtrar só o bloco de Psicologia quando a
-prova mistura disciplinas, parsear gabarito por código em vez de à
-mão, excluir questões anuladas) em rodadas futuras.
+Os outros 4 links que o usuário forneceu (pciconcursos.com.br
+listagens gerais de FGV/Psicólogo, CFP título de especialista, Gran
+Cursos, editais do Ministério das Mulheres) contêm dezenas de outras
+provas candidatas — cada uma precisa do mesmo tratamento cuidadoso
+(baixar PDF oficial, achar o gabarito definitivo, filtrar só o bloco
+de Psicologia quando a prova mistura disciplinas, parsear gabarito por
+código em vez de à mão, excluir questões anuladas) em rodadas futuras.
+Atenção: pciconcursos.com.br tem verificação de segurança (CAPTCHA)
+para downloads diretos — usar sempre a página oficial da banca
+(ex.: conhecimento.fgv.br) como fonte primária, nunca contornar
+verificações de bot.
